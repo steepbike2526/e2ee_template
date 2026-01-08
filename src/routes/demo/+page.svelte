@@ -1,0 +1,166 @@
+<script>
+  import { onMount } from 'svelte';
+  import { nanoid } from 'nanoid';
+  import { get } from 'svelte/store';
+  import { createNote, listNotes } from '$lib/api';
+  import { encryptNote, decryptNote } from '$lib/crypto/notes';
+  import { addPendingNote, cacheNotes, readCachedNotes, readPendingNotes, removePendingNote } from '$lib/storage/notes';
+  import { dekStore, onlineStore, sessionStore, syncStatusStore } from '$lib/state';
+
+  let noteText = '';
+  let error = '';
+  let notes = [];
+
+  const loadCached = async () => {
+    const cached = await readCachedNotes();
+    await hydrateNotes(cached);
+  };
+
+  const hydrateNotes = async (records) => {
+    const dek = get(dekStore);
+    if (!dek) return;
+    const decrypted = await Promise.all(
+      records
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .map(async (note) => ({
+          id: note.id,
+          createdAt: note.createdAt,
+          plaintext: await decryptNote(dek, note)
+        }))
+    );
+    notes = decrypted;
+  };
+
+  const fetchRemote = async () => {
+    const session = get(sessionStore);
+    if (!session) return;
+    const remote = await listNotes({ sessionToken: session.sessionToken });
+    await cacheNotes(remote);
+    await hydrateNotes(remote);
+  };
+
+  const syncPending = async () => {
+    const session = get(sessionStore);
+    if (!session) return;
+    if (!navigator.onLine) {
+      syncStatusStore.set('offline');
+      return;
+    }
+    syncStatusStore.set('syncing');
+    const pending = await readPendingNotes();
+    for (const note of pending) {
+      await createNote({
+        sessionToken: session.sessionToken,
+        ciphertext: note.ciphertext,
+        nonce: note.nonce,
+        aad: note.aad,
+        version: note.version,
+        createdAt: note.createdAt
+      });
+      await removePendingNote(note.id);
+    }
+    syncStatusStore.set('idle');
+  };
+
+  const handleSave = async () => {
+    const session = get(sessionStore);
+    const dek = get(dekStore);
+    if (!session || !dek) {
+      error = 'Missing session or encryption key. Please login again.';
+      return;
+    }
+    if (!noteText.trim()) {
+      error = 'Enter a note.';
+      return;
+    }
+
+    const noteId = nanoid();
+    const createdAt = Date.now();
+    const encrypted = await encryptNote(dek, noteText, {
+      userId: session.userId,
+      noteId
+    });
+
+    const record = { id: noteId, createdAt, ...encrypted };
+    await addPendingNote(record);
+    await cacheNotes([record]);
+    noteText = '';
+    await loadCached();
+
+    if (navigator.onLine) {
+      await syncPending();
+      await fetchRemote();
+    }
+  };
+
+  onMount(async () => {
+    await loadCached();
+    if (navigator.onLine) {
+      await fetchRemote();
+      await syncPending();
+    }
+  });
+
+  $: if (!$onlineStore) {
+    syncStatusStore.set('offline');
+  }
+</script>
+
+{#if !$sessionStore || !$dekStore}
+  <section class="card">
+    <h2>Encrypted Notes</h2>
+    <p class="helper">Please login to unlock your device key and decrypt notes.</p>
+  </section>
+{:else}
+  <section class="card">
+  <h2>Encrypted Notes</h2>
+  <p class="helper">
+    Notes are encrypted in your browser using the DEK. Convex only receives ciphertext, nonce, and metadata.
+  </p>
+
+  <div class="form">
+    <label>
+      New note
+      <textarea bind:value={noteText} rows="4"></textarea>
+    </label>
+    {#if error}
+      <div class="error">{error}</div>
+    {/if}
+    <button on:click|preventDefault={handleSave}>Save note</button>
+  </div>
+
+  <div class="notes">
+    {#if notes.length === 0}
+      <p class="helper">No notes yet.</p>
+    {:else}
+      {#each notes as note}
+        <article class="note">
+          <div class="note__meta">{new Date(note.createdAt).toLocaleString()}</div>
+          <div>{note.plaintext}</div>
+        </article>
+      {/each}
+    {/if}
+  </div>
+  </section>
+{/if}
+
+<style>
+  .notes {
+    margin-top: 2rem;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .note {
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background: #0f172a;
+    border: 1px solid #334155;
+  }
+
+  .note__meta {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+  }
+</style>
