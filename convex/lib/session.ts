@@ -1,10 +1,14 @@
-import crypto from 'crypto';
 import { Id } from '../_generated/dataModel';
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 export function generateSessionToken() {
-  return crypto.randomBytes(32).toString('base64url');
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 export async function createSession(ctx: any, userId: Id<'users'>) {
