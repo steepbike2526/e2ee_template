@@ -1,4 +1,4 @@
-import argon2 from 'argon2-browser';
+import argon2 from './argon2';
 import { base64ToBytes, bytesToBase64, toUtf8Bytes } from './encoding';
 
 const ARGON2_PARAMS = {

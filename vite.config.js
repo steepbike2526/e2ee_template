@@ -27,7 +27,12 @@ const config = {
         enabled: true
       }
     })
-  ]
+  ],
+  build: {
+    commonjsOptions: {
+      ignore: ['argon2-browser/dist/argon2.wasm']
+    }
+  }
 };
 
 export default config;
