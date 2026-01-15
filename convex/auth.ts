@@ -1,6 +1,5 @@
 import { mutation } from 'convex/server';
 import { v } from 'convex/values';
-import crypto from 'crypto';
 import { hashPassword, verifyPassword } from './lib/password';
 import { createSession } from './lib/session';
 
@@ -29,8 +28,9 @@ export const registerUser = mutation({
       }
     }
 
-    const { hash, salt } = hashPassword(args.password);
-    const e2eeSalt = crypto.randomBytes(16).toString('base64');
+    const { hash, salt } = await hashPassword(args.password);
+    const e2eeSaltBytes = crypto.getRandomValues(new Uint8Array(16));
+    const e2eeSalt = btoa(String.fromCharCode(...e2eeSaltBytes));
     const userId = await ctx.db.insert('users', {
       username: args.username,
       email: args.email,
@@ -67,7 +67,7 @@ export const loginUser = mutation({
       throw new Error('Invalid username or password.');
     }
 
-    const isValid = verifyPassword(args.password, user.passwordHash, user.passwordSalt);
+    const isValid = await verifyPassword(args.password, user.passwordHash, user.passwordSalt);
     if (!isValid) {
       throw new Error('Invalid username or password.');
     }
