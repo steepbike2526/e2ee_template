@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "svelte-kit sync && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "eslint .",
@@ -14,7 +14,7 @@
     "convex:deploy": "convex deploy"
   },
   "dependencies": {
-    "@sveltejs/adapter-vercel": "^6.3.0",
+    "@sveltejs/adapter-static": "^3.0.9",
     "@sveltejs/kit": "^2.49.5",
     "@vite-pwa/sveltekit": "^1.1.0",
     "argon2-browser": "^1.18.0",

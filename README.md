@@ -53,6 +53,28 @@ Convex hosting is handled separately:
 npx convex deploy
 ```
 
+## Deployment (GitHub Pages + Custom Domain)
+
+1. Update the SvelteKit adapter to static (already configured in this template) and commit the changes.
+2. Push to `main`. The included GitHub Actions workflow builds the app and deploys the `build/` output to GitHub Pages.
+3. In GitHub, go to **Settings → Pages** and select **GitHub Actions** as the source.
+
+### Configure base path (only if not using a custom domain)
+
+If you are hosting at `https://<user>.github.io/<repo>/`, set a repository variable named `BASE_PATH` to `/<repo>`.
+For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
+
+### Configure environment variables
+
+Add a repository variable named `VITE_CONVEX_URL` with your Convex deployment URL so the build can complete.
+
+### Custom domain
+
+1. In **Settings → Pages**, set your custom domain (e.g., `notes.example.com`). GitHub will create a `CNAME` file.
+2. Create a DNS record:
+   - **CNAME** for subdomains: `notes.example.com` → `<user>.github.io`
+   - **A records** for apex domains: use GitHub Pages IPs from GitHub docs
+
 ## Architecture overview
 
 ### Auth vs E2EE separation
