@@ -4,14 +4,20 @@ import { v } from 'convex/values';
 export default defineSchema({
   users: defineTable({
     username: v.string(),
-    email: v.optional(v.string()),
-    passwordHash: v.string(),
-    passwordSalt: v.string(),
+    email: v.string(),
     e2eeSalt: v.string(),
+    totpSecret: v.optional(v.string()),
     createdAt: v.number()
   })
     .index('by_username', ['username'])
     .index('by_email', ['email']),
+  magicLinks: defineTable({
+    userId: v.id('users'),
+    token: v.string(),
+    expiresAt: v.number()
+  })
+    .index('by_user', ['userId'])
+    .index('by_token', ['token']),
   sessions: defineTable({
     userId: v.id('users'),
     token: v.string(),
