@@ -57,12 +57,13 @@ npx convex deploy
 
 ### Auth vs E2EE separation
 
-- **Auth**: username + password stored in Convex (hashed with `scrypt`). This is only for authentication and sessions.
-- **E2EE**: derived keys and note encryption are entirely client-side. Convex never receives plaintext.
+- **Auth**: magic link or TOTP (email required) for sessions. The decryption passphrase is never sent to Convex.
+- **E2EE**: derived keys and note encryption are entirely client-side. Convex never receives plaintext or the decryption
+  passphrase.
 
 ### Key hierarchy
 
-1. **Master Key (MK)**: derived from the login password using Argon2id and a per-user salt stored server-side.
+1. **Master Key (MK)**: derived from the local passphrase using Argon2id and a per-user salt stored server-side.
 2. **Data Encryption Key (DEK)**: random symmetric key created client-side; used for all note encryption.
 3. **Per-device wrapping key**: each device has its own AES-GCM key used to wrap the DEK.
    - The device key is encrypted with the MK and stored only in IndexedDB on that device.
@@ -70,16 +71,16 @@ npx convex deploy
 
 ### Encryption flow (signup)
 
-1. Client registers user (auth).
-2. Convex returns the per-user `e2eeSalt`.
-3. Client derives MK with Argon2id and generates a random DEK.
+1. Client registers user (auth) with email and optional TOTP enrollment.
+2. Convex returns the per-user `e2eeSalt` and (if enabled) a TOTP secret.
+3. Client derives MK from the local passphrase with Argon2id and generates a random DEK.
 4. Client generates a device wrapping key, encrypts it with the MK, and stores it locally.
 5. Client wraps the DEK with the device key and stores the wrapped DEK in Convex.
 
 ### Encryption flow (login)
 
-1. Client logs in (auth) and receives `e2eeSalt` + session token.
-2. Client derives MK and decrypts the device key from local storage.
+1. Client logs in with magic link or TOTP and receives `e2eeSalt` + session token.
+2. Client derives MK from the local passphrase and decrypts the device key from local storage.
 3. Client fetches the wrapped DEK from Convex, unwraps locally, and decrypts notes.
 
 ### Offline storage & sync
@@ -93,7 +94,7 @@ npx convex deploy
 
 - Browser storage is **best-effort** and not equivalent to a hardware enclave.
 - This demo uses AES-GCM for both note encryption and wrapping. Nonces are random per encryption.
-- Password-based MK derivation uses Argon2id via `argon2-browser` with configurable parameters.
+- Passphrase-based MK derivation uses Argon2id via `argon2-browser` with configurable parameters.
 
 ## Project structure
 
@@ -108,7 +109,7 @@ static/               # PWA icons
 ## Notes for extending
 
 - To add multi-device onboarding, implement a DEK export/import flow (e.g., QR or passphrase) so a new device can register its own wrapping key.
-- If you want separate login and encryption passwords, adjust `deriveMasterKey` to use a second password prompt.
+- If you want passphrase recovery, design a key rotation or escrow flow that does not expose plaintext to the server.
 
 ---
 

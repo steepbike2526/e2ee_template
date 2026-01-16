@@ -3,14 +3,22 @@ import { getConvexClient } from './convexClient';
 
 export async function registerUser(payload: {
   username: string;
-  email?: string;
-  password: string;
+  email: string;
+  enableTotp?: boolean;
 }) {
   return getConvexClient().mutation(api.auth.registerUser, payload);
 }
 
-export async function loginUser(payload: { username: string; password: string; deviceId: string }) {
-  return getConvexClient().mutation(api.auth.loginUser, payload);
+export async function requestMagicLink(payload: { email: string }) {
+  return getConvexClient().mutation(api.auth.requestMagicLink, payload);
+}
+
+export async function verifyMagicLink(payload: { email: string; token: string }) {
+  return getConvexClient().mutation(api.auth.verifyMagicLink, payload);
+}
+
+export async function loginWithTotp(payload: { email: string; code: string }) {
+  return getConvexClient().mutation(api.auth.loginWithTotp, payload);
 }
 
 export async function registerDevice(payload: {
