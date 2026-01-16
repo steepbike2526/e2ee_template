@@ -5,6 +5,7 @@
   import { createNote, listNotes } from '$lib/api';
   import { encryptNote, decryptNote } from '$lib/crypto/notes';
   import { addPendingNote, cacheNotes, readCachedNotes, readPendingNotes, removePendingNote } from '$lib/storage/notes';
+  import { hasConvexUrl } from '$lib/convexClient';
   import { dekStore, onlineStore, sessionStore, syncStatusStore } from '$lib/state';
 
   let noteText = '';
@@ -32,6 +33,7 @@
   };
 
   const fetchRemote = async () => {
+    if (!hasConvexUrl) return;
     const session = get(sessionStore);
     if (!session) return;
     const remote = await listNotes({ sessionToken: session.sessionToken });
@@ -40,6 +42,7 @@
   };
 
   const syncPending = async () => {
+    if (!hasConvexUrl) return;
     const session = get(sessionStore);
     if (!session) return;
     if (!navigator.onLine) {
@@ -67,6 +70,10 @@
     const dek = get(dekStore);
     if (!session || !dek) {
       error = 'Missing session or encryption key. Please login again.';
+      return;
+    }
+    if (!hasConvexUrl) {
+      error = 'Missing VITE_CONVEX_URL. Configure Convex to sync notes.';
       return;
     }
     if (!noteText.trim()) {
