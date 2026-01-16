@@ -112,26 +112,27 @@
     padding: 1.5rem;
   }
 
-  .card {
+  :global(.card) {
     background: #1e293b;
     padding: 1.5rem;
     border-radius: 1rem;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.4);
   }
 
-  .form {
+  :global(.form) {
     display: grid;
     gap: 1rem;
     margin-top: 1rem;
   }
 
-  label {
+  :global(label) {
     display: grid;
     gap: 0.4rem;
     font-size: 0.9rem;
   }
 
-  input, textarea {
+  :global(input),
+  :global(textarea) {
     padding: 0.65rem;
     border-radius: 0.5rem;
     border: 1px solid #334155;
@@ -139,7 +140,7 @@
     color: #e2e8f0;
   }
 
-  button {
+  :global(button) {
     padding: 0.65rem 1.1rem;
     border-radius: 0.5rem;
     border: none;
@@ -149,12 +150,12 @@
     cursor: pointer;
   }
 
-  .helper {
+  :global(.helper) {
     font-size: 0.85rem;
     color: #94a3b8;
   }
 
-  .error {
+  :global(.error) {
     color: #f87171;
     font-size: 0.9rem;
   }
