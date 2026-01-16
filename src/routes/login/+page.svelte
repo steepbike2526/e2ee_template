@@ -1,5 +1,6 @@
 <script>
   import { goto } from '$app/navigation';
+  import { onMount } from 'svelte';
   import { deriveMasterKey } from '$lib/crypto/keys';
   import { fetchDeviceDek, loginWithTotp, requestMagicLink, verifyMagicLink } from '$lib/api';
   import { loadDeviceKey, unwrapDekForDevice } from '$lib/e2ee';
@@ -7,7 +8,10 @@
   import { dekStore } from '$lib/state';
   import { readAnySession } from '$lib/storage/session';
 
+  const savedEmailKey = 'e2ee:lastEmail';
+
   let method = 'magic';
+  let username = '';
   let email = '';
   let token = '';
   let totpCode = '';
@@ -18,6 +22,20 @@
   let pendingSession = null;
   let error = '';
   let loading = false;
+
+  onMount(() => {
+    const savedEmail = localStorage.getItem(savedEmailKey);
+    if (savedEmail && !email) {
+      email = savedEmail;
+    }
+  });
+
+  const rememberEmail = (value) => {
+    const trimmed = value.trim();
+    if (trimmed) {
+      localStorage.setItem(savedEmailKey, trimmed);
+    }
+  };
 
   const startDecrypt = (response) => {
     pendingSession = response;
@@ -34,6 +52,7 @@
     loading = true;
     try {
       const response = await requestMagicLink({ email });
+      rememberEmail(email);
       magicLinkToken = response.token;
       magicLinkExpiresAt = response.expiresAt;
     } catch (err) {
@@ -52,6 +71,7 @@
     loading = true;
     try {
       const response = await verifyMagicLink({ email, token });
+      rememberEmail(email);
       startDecrypt(response);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Magic link verification failed.';
@@ -62,13 +82,13 @@
 
   const handleTotpLogin = async () => {
     error = '';
-    if (!email.trim() || !totpCode.trim()) {
-      error = 'Email and TOTP code are required.';
+    if (!username.trim() || !totpCode.trim()) {
+      error = 'Username and TOTP code are required.';
       return;
     }
     loading = true;
     try {
-      const response = await loginWithTotp({ email, code: totpCode });
+      const response = await loginWithTotp({ username, code: totpCode });
       startDecrypt(response);
     } catch (err) {
       error = err instanceof Error ? err.message : 'TOTP login failed.';
@@ -160,8 +180,8 @@
     {:else}
       <div class="form">
         <label>
-          Email
-          <input bind:value={email} type="email" autocomplete="email" />
+          Username
+          <input bind:value={username} autocomplete="username" />
         </label>
         <label>
           Authentication code
