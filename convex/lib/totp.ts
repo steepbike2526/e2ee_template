@@ -11,7 +11,10 @@ export function generateTotpSecret(length = 32) {
   const bytes = crypto.getRandomValues(new Uint8Array(length));
   let secret = '';
   for (let i = 0; i < length; i += 1) {
-    secret += BASE32_ALPHABET[bytes[i] % BASE32_ALPHABET.length];
+    const char = BASE32_ALPHABET[bytes[i] % BASE32_ALPHABET.length];
+    if (char) {
+      secret += char;
+    }
   }
   return secret;
 }
@@ -54,12 +57,12 @@ export async function generateTotpCode(secret: string, timestamp = Date.now(), s
 
   const key = base32ToBytes(secret);
   const hmac = await hmacSha1(key, new Uint8Array(buffer));
-  const offset = hmac[hmac.length - 1] & 0x0f;
+  const offset = (hmac[hmac.length - 1] ?? 0) & 0x0f;
   const binary =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff);
+    (((hmac[offset] ?? 0) & 0x7f) << 24) |
+    (((hmac[offset + 1] ?? 0) & 0xff) << 16) |
+    (((hmac[offset + 2] ?? 0) & 0xff) << 8) |
+    ((hmac[offset + 3] ?? 0) & 0xff);
   const code = (binary % 1_000_000).toString().padStart(6, '0');
   return code;
 }
