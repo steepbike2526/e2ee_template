@@ -5,11 +5,13 @@
   import { registerDevice, registerUser } from '$lib/api';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
+  import { nanoid } from 'nanoid';
 
   let username = '';
   let email = '';
   let passphrase = '';
   let confirmPassphrase = '';
+  let generatedPassphrase = '';
   let enableTotp = false;
   let totpSecret = '';
   let error = '';
@@ -19,18 +21,25 @@
   const validate = () => {
     if (!username.trim()) return 'Username is required.';
     if (!email.trim()) return 'Email is required for magic link or TOTP login.';
-    if (!passphrase || passphrase.length < 8) return 'Passphrase must be at least 8 characters.';
-    if (passphrase !== confirmPassphrase) return 'Passphrases do not match.';
+    if (passphrase || confirmPassphrase) {
+      if (!passphrase || passphrase.length < 8) return 'Passphrase must be at least 8 characters.';
+      if (passphrase !== confirmPassphrase) return 'Passphrases do not match.';
+    }
     return '';
   };
 
   const handleSubmit = async () => {
     error = validate();
     if (error) return;
+    generatedPassphrase = '';
     loading = true;
     try {
       const response = await registerUser({ username, email, enableTotp });
-      const masterKey = await deriveMasterKey(passphrase, response.e2eeSalt);
+      const resolvedPassphrase = passphrase?.trim() ? passphrase : nanoid(24);
+      if (!passphrase?.trim()) {
+        generatedPassphrase = resolvedPassphrase;
+      }
+      const masterKey = await deriveMasterKey(resolvedPassphrase, response.e2eeSalt);
       const dek = await generateAesKey();
       const deviceBundle = await createDeviceKeyBundle(masterKey.keyBytes);
       const wrappedDek = await wrapDekForDevice(dek, deviceBundle.deviceKey);
@@ -54,7 +63,7 @@
       dekStore.set(dek);
       totpSecret = response.totpSecret ?? '';
       registrationComplete = true;
-      if (!totpSecret) {
+      if (!totpSecret && !generatedPassphrase) {
         await goto('/demo');
       }
     } catch (err) {
@@ -76,13 +85,22 @@
     device.
   </p>
 
-  {#if registrationComplete && totpSecret}
+  {#if registrationComplete && (totpSecret || generatedPassphrase)}
     <div class="totp-card">
-      <h3>Save your TOTP secret</h3>
-      <p class="helper">
-        Add this secret to your authenticator app. This is shown only once. Store it somewhere safe before continuing.
-      </p>
-      <div class="totp-secret">{totpSecret}</div>
+      {#if generatedPassphrase}
+        <h3>Save your encryption passphrase</h3>
+        <p class="helper">
+          We generated a passphrase because none was provided. Store it somewhere safe before continuing.
+        </p>
+        <div class="totp-secret">{generatedPassphrase}</div>
+      {/if}
+      {#if totpSecret}
+        <h3>Save your TOTP secret</h3>
+        <p class="helper">
+          Add this secret to your authenticator app. This is shown only once. Store it somewhere safe before continuing.
+        </p>
+        <div class="totp-secret">{totpSecret}</div>
+      {/if}
       <button on:click|preventDefault={handleContinue}>Continue to notes</button>
     </div>
   {:else}
@@ -96,13 +114,16 @@
       <input bind:value={email} type="email" autocomplete="email" />
     </label>
     <label>
-      Encryption passphrase
+      Encryption passphrase (optional)
       <input bind:value={passphrase} type="password" autocomplete="new-password" />
     </label>
     <label>
       Confirm passphrase
       <input bind:value={confirmPassphrase} type="password" autocomplete="new-password" />
     </label>
+    <p class="helper">
+      Leave the passphrase blank to generate one for you. You will be asked to save it after registration.
+    </p>
     <label class="inline">
       <input type="checkbox" bind:checked={enableTotp} />
       Enable TOTP for login

@@ -1,3 +1,6 @@
+import { webcrypto } from 'node:crypto';
+
+const crypto = webcrypto;
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
 function normalizeSecret(secret: string) {
