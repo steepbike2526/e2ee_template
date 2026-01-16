@@ -6,10 +6,15 @@ import { generateTotpSecret, verifyTotpCode } from './lib/totp';
 export const registerUser = mutation({
   args: {
     username: v.string(),
-    email: v.string(),
+    email: v.optional(v.string()),
     enableTotp: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
+    const email = args.email?.trim();
+    if (!args.enableTotp && !email) {
+      throw new Error('Email is required unless you enable TOTP.');
+    }
+
     const existingUser = await ctx.db
       .query('users')
       .withIndex('by_username', (q) => q.eq('username', args.username))
@@ -18,12 +23,14 @@ export const registerUser = mutation({
       throw new Error('Username already exists.');
     }
 
-    const existingEmail = await ctx.db
-      .query('users')
-      .withIndex('by_email', (q) => q.eq('email', args.email))
-      .unique();
-    if (existingEmail) {
-      throw new Error('Email already exists.');
+    if (email) {
+      const existingEmail = await ctx.db
+        .query('users')
+        .withIndex('by_email', (q) => q.eq('email', email))
+        .unique();
+      if (existingEmail) {
+        throw new Error('Email already exists.');
+      }
     }
 
     const e2eeSaltBytes = crypto.getRandomValues(new Uint8Array(16));
@@ -31,7 +38,7 @@ export const registerUser = mutation({
     const totpSecret = args.enableTotp ? generateTotpSecret() : undefined;
     const userId = await ctx.db.insert('users', {
       username: args.username,
-      email: args.email,
+      email,
       e2eeSalt,
       totpSecret,
       createdAt: Date.now()
@@ -123,13 +130,13 @@ export const verifyMagicLink = mutation({
 
 export const loginWithTotp = mutation({
   args: {
-    email: v.string(),
+    username: v.string(),
     code: v.string()
   },
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query('users')
-      .withIndex('by_email', (q) => q.eq('email', args.email))
+      .withIndex('by_username', (q) => q.eq('username', args.username))
       .unique();
 
     if (!user || !user.totpSecret) {

@@ -20,7 +20,7 @@
 
   const validate = () => {
     if (!username.trim()) return 'Username is required.';
-    if (!email.trim()) return 'Email is required for magic link or TOTP login.';
+    if (!enableTotp && !email.trim()) return 'Email is required unless you enable TOTP.';
     if (passphrase || confirmPassphrase) {
       if (!passphrase || passphrase.length < 8) return 'Passphrase must be at least 8 characters.';
       if (passphrase !== confirmPassphrase) return 'Passphrases do not match.';
@@ -34,7 +34,11 @@
     generatedPassphrase = '';
     loading = true;
     try {
-      const response = await registerUser({ username, email, enableTotp });
+      const response = await registerUser({
+        username,
+        email: email.trim() ? email.trim() : undefined,
+        enableTotp
+      });
       const resolvedPassphrase = passphrase?.trim() ? passphrase : nanoid(24);
       if (!passphrase?.trim()) {
         generatedPassphrase = resolvedPassphrase;
@@ -110,7 +114,7 @@
       <input bind:value={username} autocomplete="username" />
     </label>
     <label>
-      Email
+      Email {enableTotp ? '(optional for TOTP)' : '(required for magic link)'}
       <input bind:value={email} type="email" autocomplete="email" />
     </label>
     <label>
@@ -128,6 +132,11 @@
       <input type="checkbox" bind:checked={enableTotp} />
       Enable TOTP for login
     </label>
+    {#if enableTotp}
+      <p class="helper">
+        If you skip email, you will only be able to log in with TOTP.
+      </p>
+    {/if}
 
     {#if error}
       <div class="error">{error}</div>
