@@ -1,6 +1,10 @@
 import argon2 from './argon2';
 import { base64ToBytes, bytesToBase64, toUtf8Bytes } from './encoding';
 
+type ByteArray = Uint8Array<ArrayBuffer>;
+
+const toByteArray = (bytes: Uint8Array): ByteArray => new Uint8Array(bytes);
+
 const ARGON2_PARAMS = {
   time: 3,
   mem: 64 * 1024,
@@ -36,7 +40,8 @@ export function generateRandomSalt(): string {
 }
 
 export async function importAesKey(rawKey: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, [
+  const keyData = toByteArray(rawKey);
+  return crypto.subtle.importKey('raw', keyData, { name: 'AES-GCM' }, false, [
     'encrypt',
     'decrypt'
   ]);
@@ -57,9 +62,9 @@ export async function exportRawKey(key: CryptoKey): Promise<Uint8Array> {
 export async function encryptWithKey(key: CryptoKey, plaintext: Uint8Array, aad?: Uint8Array) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad ? toByteArray(aad) : undefined },
     key,
-    plaintext
+    toByteArray(plaintext)
   );
   return {
     nonce: bytesToBase64(nonce),
@@ -72,10 +77,10 @@ export async function decryptWithKey(
   payload: { nonce: string; ciphertext: string },
   aad?: Uint8Array
 ): Promise<Uint8Array> {
-  const nonce = base64ToBytes(payload.nonce);
-  const ciphertext = base64ToBytes(payload.ciphertext);
+  const nonce = toByteArray(base64ToBytes(payload.nonce));
+  const ciphertext = toByteArray(base64ToBytes(payload.ciphertext));
   const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad },
+    { name: 'AES-GCM', iv: nonce, additionalData: aad ? toByteArray(aad) : undefined },
     key,
     ciphertext
   );
