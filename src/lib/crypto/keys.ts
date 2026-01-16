@@ -61,15 +61,34 @@ export async function exportRawKey(key: CryptoKey): Promise<Uint8Array> {
 
 export async function encryptWithKey(key: CryptoKey, plaintext: Uint8Array, aad?: Uint8Array) {
   const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad ? toByteArray(aad) : undefined },
-    key,
-    toByteArray(plaintext)
-  );
-  return {
-    nonce: bytesToBase64(nonce),
-    ciphertext: bytesToBase64(new Uint8Array(ciphertext))
-  };
+  const algorithm: AesGcmParams = { name: 'AES-GCM', iv: nonce };
+  if (aad) {
+    algorithm.additionalData = toByteArray(aad);
+  }
+  try {
+    const ciphertext = await crypto.subtle.encrypt(
+      algorithm,
+      key,
+      toByteArray(plaintext)
+    );
+    return {
+      nonce: bytesToBase64(nonce),
+      ciphertext: bytesToBase64(new Uint8Array(ciphertext))
+    };
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('encryptWithKey failed', {
+        name: (err as Error).name,
+        message: (err as Error).message,
+        keyType: key.type,
+        keyUsages: key.usages,
+        nonceLength: nonce.byteLength,
+        aadLength: aad?.byteLength ?? 0,
+        plaintextLength: plaintext.byteLength
+      });
+    }
+    throw err;
+  }
 }
 
 export async function decryptWithKey(
@@ -79,12 +98,31 @@ export async function decryptWithKey(
 ): Promise<Uint8Array> {
   const nonce = toByteArray(base64ToBytes(payload.nonce));
   const ciphertext = toByteArray(base64ToBytes(payload.ciphertext));
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: nonce, additionalData: aad ? toByteArray(aad) : undefined },
-    key,
-    ciphertext
-  );
-  return new Uint8Array(plaintext);
+  const algorithm: AesGcmParams = { name: 'AES-GCM', iv: nonce };
+  if (aad) {
+    algorithm.additionalData = toByteArray(aad);
+  }
+  try {
+    const plaintext = await crypto.subtle.decrypt(
+      algorithm,
+      key,
+      ciphertext
+    );
+    return new Uint8Array(plaintext);
+  } catch (err) {
+    if (import.meta.env.DEV) {
+      console.warn('decryptWithKey failed', {
+        name: (err as Error).name,
+        message: (err as Error).message,
+        keyType: key.type,
+        keyUsages: key.usages,
+        nonceLength: nonce.byteLength,
+        aadLength: aad?.byteLength ?? 0,
+        ciphertextLength: ciphertext.byteLength
+      });
+    }
+    throw err;
+  }
 }
 
 export function deriveDeviceKeyLabel(deviceId: string) {
