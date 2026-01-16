@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { fileURLToPath } from 'node:url';
 
 const config = {
   plugins: [
@@ -28,6 +29,11 @@ const config = {
       }
     })
   ],
+  server: {
+    fs: {
+      allow: [fileURLToPath(new URL('./convex', import.meta.url))]
+    }
+  },
   build: {
     commonjsOptions: {
       ignore: ['argon2-browser/dist/argon2.wasm']

@@ -7,4 +7,16 @@ if (!convexUrl) {
   console.warn('Missing VITE_CONVEX_URL. Convex calls will fail until configured.');
 }
 
-export const convexClient = new ConvexHttpClient(convexUrl || '');
+let client: ConvexHttpClient | null = null;
+
+export const hasConvexUrl = Boolean(convexUrl);
+
+export const getConvexClient = () => {
+  if (!convexUrl) {
+    throw new Error('Missing VITE_CONVEX_URL. Convex calls will fail until configured.');
+  }
+  if (!client) {
+    client = new ConvexHttpClient(convexUrl);
+  }
+  return client;
+};
