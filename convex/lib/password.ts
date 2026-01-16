@@ -11,7 +11,7 @@ function toBase64(bytes: Uint8Array) {
 
 function fromBase64(value: string) {
   const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
+  const bytes = new Uint8Array<ArrayBuffer>(binary.length);
   for (let i = 0; i < binary.length; i += 1) {
     bytes[i] = binary.charCodeAt(i);
   }
@@ -29,7 +29,7 @@ function timingSafeEqual(a: Uint8Array, b: Uint8Array) {
   return result === 0;
 }
 
-async function deriveKeyBits(password: string, salt: Uint8Array) {
+async function deriveKeyBits(password: string, salt: Uint8Array<ArrayBuffer>) {
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -52,7 +52,9 @@ async function deriveKeyBits(password: string, salt: Uint8Array) {
 }
 
 export async function hashPassword(password: string, salt?: string) {
-  const saltBytes = salt ? fromBase64(salt) : crypto.getRandomValues(new Uint8Array(16));
+  const saltBytes = salt
+    ? fromBase64(salt)
+    : crypto.getRandomValues(new Uint8Array<ArrayBuffer>(16));
   const hashBytes = await deriveKeyBits(password, saltBytes);
   return {
     hash: toBase64(hashBytes),
