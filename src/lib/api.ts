@@ -31,6 +31,19 @@ export async function registerDevice(payload: {
   return getConvexClient().mutation(api.devices.registerDevice, payload);
 }
 
+export async function storeMasterWrappedDek(payload: {
+  sessionToken: string;
+  wrappedDek: string;
+  wrapNonce: string;
+  version: number;
+}) {
+  return getConvexClient().mutation(api.auth.storeMasterWrappedDek, payload);
+}
+
+export async function fetchMasterWrappedDek(payload: { sessionToken: string }) {
+  return getConvexClient().query(api.auth.getMasterWrappedDek, payload);
+}
+
 export async function fetchDeviceDek(payload: { sessionToken: string; deviceId: string }) {
   return getConvexClient().query(api.devices.getWrappedDek, payload);
 }

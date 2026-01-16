@@ -1,4 +1,4 @@
-import { mutation } from './_generated/server';
+import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { createSession } from './lib/session';
 import { generateTotpSecret, verifyTotpCode } from './lib/totp';
@@ -154,6 +154,58 @@ export const loginWithTotp = mutation({
       username: user.username,
       e2eeSalt: user.e2eeSalt,
       sessionToken: session.token
+    };
+  }
+});
+
+export const storeMasterWrappedDek = mutation({
+  args: {
+    sessionToken: v.string(),
+    wrappedDek: v.string(),
+    wrapNonce: v.string(),
+    version: v.number()
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query('sessions')
+      .withIndex('by_token', (q) => q.eq('token', args.sessionToken))
+      .unique();
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error('Unauthorized');
+    }
+
+    await ctx.db.patch(session.userId, {
+      masterWrappedDek: args.wrappedDek,
+      masterWrapNonce: args.wrapNonce,
+      masterWrapVersion: args.version
+    });
+
+    return { ok: true };
+  }
+});
+
+export const getMasterWrappedDek = query({
+  args: {
+    sessionToken: v.string()
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query('sessions')
+      .withIndex('by_token', (q) => q.eq('token', args.sessionToken))
+      .unique();
+    if (!session || session.expiresAt < Date.now()) {
+      throw new Error('Unauthorized');
+    }
+
+    const user = await ctx.db.get(session.userId);
+    if (!user?.masterWrappedDek || !user.masterWrapNonce || !user.masterWrapVersion) {
+      throw new Error('Master-wrapped DEK is not available.');
+    }
+
+    return {
+      wrappedDek: user.masterWrappedDek,
+      wrapNonce: user.masterWrapNonce,
+      version: user.masterWrapVersion
     };
   }
 });

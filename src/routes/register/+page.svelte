@@ -1,8 +1,8 @@
 <script>
   import { goto } from '$app/navigation';
-  import { createDeviceKeyBundle, wrapDekForDevice } from '$lib/e2ee';
+  import { createDeviceKeyBundle, wrapDekForDevice, wrapDekWithMasterKey } from '$lib/e2ee';
   import { deriveMasterKey, generateAesKey } from '$lib/crypto/keys';
-  import { registerDevice, registerUser } from '$lib/api';
+  import { registerDevice, registerUser, storeMasterWrappedDek } from '$lib/api';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
   import { nanoid } from 'nanoid';
@@ -47,12 +47,20 @@
       const dek = await generateAesKey();
       const deviceBundle = await createDeviceKeyBundle(masterKey.keyBytes);
       const wrappedDek = await wrapDekForDevice(dek, deviceBundle.deviceKey);
+      const masterWrappedDek = await wrapDekWithMasterKey(dek, masterKey.keyBytes);
 
       await registerDevice({
         sessionToken: response.sessionToken,
         deviceId: deviceBundle.deviceId,
         wrappedDek: wrappedDek.ciphertext,
         wrapNonce: wrappedDek.nonce,
+        version: 1
+      });
+
+      await storeMasterWrappedDek({
+        sessionToken: response.sessionToken,
+        wrappedDek: masterWrappedDek.ciphertext,
+        wrapNonce: masterWrappedDek.nonce,
         version: 1
       });
 
