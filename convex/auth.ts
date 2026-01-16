@@ -1,4 +1,4 @@
-import { mutation } from 'convex/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { hashPassword, verifyPassword } from './lib/password';
 import { createSession } from './lib/session';
