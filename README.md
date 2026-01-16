@@ -136,3 +136,22 @@ static/               # PWA icons
 ---
 
 This template prioritizes clarity over cleverness so you can expand it safely.
+
+## Data migrations (Convex)
+
+When you change the schema in a way that adds new required fields, you need to
+backfill existing documents so they conform before re-tightening the validators.
+A safe workflow looks like this:
+
+1. **Temporarily relax the schema** for the new field (e.g., `v.optional(...)`).
+2. **Run a migration** to backfill existing documents.
+3. **Tighten the schema again** once the data is updated.
+
+This repo includes a migration to backfill missing user emails:
+
+```bash
+npx convex run migrations:backfillUserEmails --args '{"defaultDomain":"legacy.invalid"}'
+```
+
+Choose a `defaultDomain` that you control, or update the migration to map
+real emails from your own source of truth before making `email` required again.
