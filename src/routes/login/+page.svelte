@@ -2,8 +2,8 @@
   import { goto } from '$app/navigation';
   import { onMount } from 'svelte';
   import { deriveMasterKey } from '$lib/crypto/keys';
-  import { fetchDeviceDek, loginWithTotp, requestMagicLink, verifyMagicLink } from '$lib/api';
-  import { loadDeviceKey, unwrapDekForDevice } from '$lib/e2ee';
+  import { fetchDeviceDek, fetchMasterWrappedDek, loginWithTotp, registerDevice, requestMagicLink, verifyMagicLink } from '$lib/api';
+  import { createDeviceKeyBundle, loadDeviceKey, unwrapDekForDevice, unwrapDekWithMasterKey, wrapDekForDevice } from '$lib/e2ee';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
   import { readAnySession } from '$lib/storage/session';
@@ -107,17 +107,40 @@
     loading = true;
     try {
       const previous = await readAnySession();
-      const deviceId = previous?.deviceId ?? '';
-      if (!deviceId) {
-        throw new Error('This device is not registered. Please login on the original device to export the DEK.');
-      }
+      let deviceId = previous?.deviceId ?? '';
       const masterKey = await deriveMasterKey(passphrase, pendingSession.e2eeSalt);
-      const deviceKey = await loadDeviceKey(deviceId, masterKey.keyBytes);
-      const wrappedDek = await fetchDeviceDek({ sessionToken: pendingSession.sessionToken, deviceId });
-      const dek = await unwrapDekForDevice({
-        ciphertext: wrappedDek.wrappedDek,
-        nonce: wrappedDek.wrapNonce
-      }, deviceKey);
+      let dek;
+      if (deviceId) {
+        try {
+          const deviceKey = await loadDeviceKey(deviceId, masterKey.keyBytes);
+          const wrappedDek = await fetchDeviceDek({ sessionToken: pendingSession.sessionToken, deviceId });
+          dek = await unwrapDekForDevice({
+            ciphertext: wrappedDek.wrappedDek,
+            nonce: wrappedDek.wrapNonce
+          }, deviceKey);
+        } catch (err) {
+          console.warn('Failed to load existing device, registering new device.', err);
+          deviceId = '';
+        }
+      }
+
+      if (!deviceId) {
+        const masterWrappedDek = await fetchMasterWrappedDek({ sessionToken: pendingSession.sessionToken });
+        dek = await unwrapDekWithMasterKey({
+          ciphertext: masterWrappedDek.wrappedDek,
+          nonce: masterWrappedDek.wrapNonce
+        }, masterKey.keyBytes);
+        const deviceBundle = await createDeviceKeyBundle(masterKey.keyBytes);
+        const wrappedDekForDevice = await wrapDekForDevice(dek, deviceBundle.deviceKey);
+        await registerDevice({
+          sessionToken: pendingSession.sessionToken,
+          deviceId: deviceBundle.deviceId,
+          wrappedDek: wrappedDekForDevice.ciphertext,
+          wrapNonce: wrappedDekForDevice.nonce,
+          version: 1
+        });
+        deviceId = deviceBundle.deviceId;
+      }
 
       await setSession({
         sessionToken: pendingSession.sessionToken,

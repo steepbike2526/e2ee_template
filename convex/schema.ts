@@ -6,6 +6,9 @@ export default defineSchema({
     username: v.string(),
     email: v.optional(v.string()),
     e2eeSalt: v.string(),
+    masterWrappedDek: v.optional(v.string()),
+    masterWrapNonce: v.optional(v.string()),
+    masterWrapVersion: v.optional(v.number()),
     totpSecret: v.optional(v.string()),
     createdAt: v.number()
   })
