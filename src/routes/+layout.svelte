@@ -2,17 +2,14 @@
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
   import { onlineStore, sessionStore, syncStatusStore } from '$lib/state';
-  import { readAnySession } from '$lib/storage/session';
+  import { revokeSession } from '$lib/api';
+  import { clearSession } from '$lib/session';
   import { registerSW } from 'virtual:pwa-register';
   import '../app.css';
 
   onMount(async () => {
     if (!browser) return;
     registerSW({ immediate: true });
-    const existing = await readAnySession();
-    if (existing) {
-      sessionStore.set(existing);
-    }
     const updateOnline = () => onlineStore.set(navigator.onLine);
     updateOnline();
     window.addEventListener('online', updateOnline);
@@ -23,6 +20,13 @@
       window.removeEventListener('offline', updateOnline);
     };
   });
+
+  const handleLogout = async () => {
+    const session = $sessionStore;
+    if (!session) return;
+    await revokeSession({ sessionToken: session.sessionToken });
+    await clearSession();
+  };
 </script>
 
 <svelte:head>
@@ -37,6 +41,9 @@
       <a href="/register">Register</a>
       <a href="/login">Login</a>
       <a href="/demo">Demo</a>
+      {#if $sessionStore}
+        <button type="button" class="logout" on:click={handleLogout}>Logout</button>
+      {/if}
     </nav>
     <div class="status">
       {#if $onlineStore}
@@ -80,6 +87,15 @@
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+  }
+
+  .logout {
+    border: 1px solid #334155;
+    background: transparent;
+    color: #e2e8f0;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    cursor: pointer;
   }
 
   .status {

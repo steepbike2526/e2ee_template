@@ -9,23 +9,30 @@ export default defineSchema({
     masterWrappedDek: v.optional(v.string()),
     masterWrapNonce: v.optional(v.string()),
     masterWrapVersion: v.optional(v.number()),
-    totpSecret: v.optional(v.string()),
+    totpSecretCiphertext: v.optional(v.string()),
+    totpSecretNonce: v.optional(v.string()),
     createdAt: v.number()
   })
     .index('by_username', ['username'])
     .index('by_email', ['email']),
   magicLinks: defineTable({
     userId: v.id('users'),
-    token: v.string(),
+    tokenHash: v.string(),
     expiresAt: v.number()
   })
     .index('by_user', ['userId'])
-    .index('by_token', ['token']),
+    .index('by_token_hash', ['tokenHash'])
+    .index('by_user_token_hash', ['userId', 'tokenHash']),
   sessions: defineTable({
     userId: v.id('users'),
     token: v.string(),
     expiresAt: v.number()
   }).index('by_token', ['token']),
+  rateLimits: defineTable({
+    key: v.string(),
+    count: v.number(),
+    resetAt: v.number()
+  }).index('by_key', ['key']),
   devices: defineTable({
     userId: v.id('users'),
     deviceId: v.string(),

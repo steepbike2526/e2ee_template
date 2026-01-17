@@ -2,6 +2,19 @@ import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { createSession } from './lib/session';
 import { generateTotpSecret, verifyTotpCode } from './lib/totp';
+import { decryptSecret, encryptSecret } from './lib/secrets';
+import { enforceRateLimit } from './lib/rateLimit';
+
+async function hashToken(token: string) {
+  const data = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
 
 export const registerUser = mutation({
   args: {
@@ -10,7 +23,7 @@ export const registerUser = mutation({
     enableTotp: v.optional(v.boolean())
   },
   handler: async (ctx, args) => {
-    const email = args.email?.trim();
+    const email = args.email?.trim().toLowerCase();
     if (!args.enableTotp && !email) {
       throw new Error('Email is required unless you enable TOTP.');
     }
@@ -36,11 +49,13 @@ export const registerUser = mutation({
     const e2eeSaltBytes = crypto.getRandomValues(new Uint8Array(16));
     const e2eeSalt = btoa(String.fromCharCode(...e2eeSaltBytes));
     const totpSecret = args.enableTotp ? generateTotpSecret() : undefined;
+    const totpPayload = totpSecret ? await encryptSecret(totpSecret) : null;
     const userId = await ctx.db.insert('users', {
       username: args.username,
       email,
       e2eeSalt,
-      totpSecret,
+      totpSecretCiphertext: totpPayload?.ciphertext,
+      totpSecretNonce: totpPayload?.nonce,
       createdAt: Date.now()
     });
 
@@ -61,9 +76,15 @@ export const requestMagicLink = mutation({
     email: v.string()
   },
   handler: async (ctx, args) => {
+    const normalizedEmail = args.email.trim().toLowerCase();
+    await enforceRateLimit(ctx, {
+      key: `magic-link:${normalizedEmail}`,
+      limit: 3,
+      windowMs: 1000 * 60 * 15
+    });
     const user = await ctx.db
       .query('users')
-      .withIndex('by_email', (q) => q.eq('email', args.email))
+      .withIndex('by_email', (q) => q.eq('email', normalizedEmail))
       .unique();
 
     if (!user) {
@@ -75,17 +96,18 @@ export const requestMagicLink = mutation({
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/g, '');
+    const tokenHash = await hashToken(token);
     const expiresAt = Date.now() + 1000 * 60 * 15;
 
     await ctx.db.insert('magicLinks', {
       userId: user._id,
-      token,
+      tokenHash,
       expiresAt
     });
 
+    // TODO: deliver the token via email (or other out-of-band channel) in production.
     return {
       email: user.email,
-      token,
       expiresAt
     };
   }
@@ -97,19 +119,25 @@ export const verifyMagicLink = mutation({
     token: v.string()
   },
   handler: async (ctx, args) => {
+    const normalizedEmail = args.email.trim().toLowerCase();
+    await enforceRateLimit(ctx, {
+      key: `magic-verify:${normalizedEmail}`,
+      limit: 5,
+      windowMs: 1000 * 60 * 15
+    });
     const user = await ctx.db
       .query('users')
-      .withIndex('by_email', (q) => q.eq('email', args.email))
+      .withIndex('by_email', (q) => q.eq('email', normalizedEmail))
       .unique();
 
     if (!user) {
       throw new Error('No account found for that email.');
     }
 
+    const tokenHash = await hashToken(args.token);
     const link = await ctx.db
       .query('magicLinks')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
-      .filter((q) => q.eq(q.field('token'), args.token))
+      .withIndex('by_user_token_hash', (q) => q.eq('userId', user._id).eq('tokenHash', tokenHash))
       .unique();
 
     if (!link || link.expiresAt < Date.now()) {
@@ -134,16 +162,22 @@ export const loginWithTotp = mutation({
     code: v.string()
   },
   handler: async (ctx, args) => {
+    await enforceRateLimit(ctx, {
+      key: `totp:${args.username.trim().toLowerCase()}`,
+      limit: 5,
+      windowMs: 1000 * 60 * 15
+    });
     const user = await ctx.db
       .query('users')
       .withIndex('by_username', (q) => q.eq('username', args.username))
       .unique();
 
-    if (!user || !user.totpSecret) {
+    if (!user || !user.totpSecretCiphertext || !user.totpSecretNonce) {
       throw new Error('TOTP is not enabled for this account.');
     }
 
-    const isValid = await verifyTotpCode(user.totpSecret, args.code);
+    const totpSecret = await decryptSecret(user.totpSecretCiphertext, user.totpSecretNonce);
+    const isValid = await verifyTotpCode(totpSecret, args.code);
     if (!isValid) {
       throw new Error('Invalid authentication code.');
     }
@@ -207,5 +241,21 @@ export const getMasterWrappedDek = query({
       wrapNonce: user.masterWrapNonce,
       version: user.masterWrapVersion
     };
+  }
+});
+
+export const revokeSession = mutation({
+  args: {
+    sessionToken: v.string()
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query('sessions')
+      .withIndex('by_token', (q) => q.eq('token', args.sessionToken))
+      .unique();
+    if (session) {
+      await ctx.db.delete(session._id);
+    }
+    return { ok: true };
   }
 });

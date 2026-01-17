@@ -1,6 +1,6 @@
 import { Id } from '../_generated/dataModel';
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24;
 
 export function generateSessionToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
