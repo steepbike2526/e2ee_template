@@ -18,6 +18,10 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
 async function getAesKey() {
   const rawKey = process.env.TOTP_ENCRYPTION_KEY;
   if (!rawKey) {
@@ -27,7 +31,8 @@ async function getAesKey() {
   if (keyBytes.length !== 32) {
     throw new Error('TOTP_ENCRYPTION_KEY must decode to 32 bytes (AES-256-GCM).');
   }
-  return crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  const keyBuffer = toArrayBuffer(keyBytes);
+  return crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 
 export async function encryptSecret(secret: string) {
@@ -45,6 +50,6 @@ export async function decryptSecret(ciphertext: string, nonce: string) {
   const key = await getAesKey();
   const bytes = base64ToBytes(ciphertext);
   const iv = base64ToBytes(nonce);
-  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, bytes);
+  const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, toArrayBuffer(bytes));
   return decoder.decode(plaintext);
 }
