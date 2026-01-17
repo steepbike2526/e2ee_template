@@ -21,6 +21,10 @@ export async function loginWithTotp(payload: { username: string; code: string })
   return getConvexClient().mutation(api.auth.loginWithTotp, payload);
 }
 
+export async function revokeSession(payload: { sessionToken: string }) {
+  return getConvexClient().mutation(api.auth.revokeSession, payload);
+}
+
 export async function registerDevice(payload: {
   sessionToken: string;
   deviceId: string;

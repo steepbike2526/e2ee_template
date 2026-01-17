@@ -6,7 +6,7 @@
   import { createDeviceKeyBundle, loadDeviceKey, unwrapDekForDevice, unwrapDekWithMasterKey, wrapDekForDevice } from '$lib/e2ee';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
-  import { readAnySession } from '$lib/storage/session';
+  import { readAnyDeviceRecord } from '$lib/storage/device';
 
   const savedEmailKey = 'e2ee:lastEmail';
 
@@ -16,7 +16,6 @@
   let token = '';
   let totpCode = '';
   let passphrase = '';
-  let magicLinkToken = '';
   let magicLinkExpiresAt = 0;
   let step = 'auth';
   let pendingSession = null;
@@ -53,7 +52,6 @@
     try {
       const response = await requestMagicLink({ email });
       rememberEmail(email);
-      magicLinkToken = response.token;
       magicLinkExpiresAt = response.expiresAt;
     } catch (err) {
       error = err instanceof Error ? err.message : 'Magic link request failed.';
@@ -106,8 +104,8 @@
     }
     loading = true;
     try {
-      const previous = await readAnySession();
-      let deviceId = previous?.deviceId ?? '';
+      const deviceRecord = await readAnyDeviceRecord();
+      let deviceId = deviceRecord?.deviceId ?? '';
       const masterKey = await deriveMasterKey(passphrase, pendingSession.e2eeSalt);
       let dek;
       if (deviceId) {
@@ -184,12 +182,9 @@
           {loading ? 'Sending link...' : 'Send magic link'}
         </button>
 
-        {#if magicLinkToken}
+        {#if magicLinkExpiresAt > 0}
           <div class="helper">
-            Magic link token (dev only): <span class="token">{magicLinkToken}</span>
-          </div>
-          <div class="helper">
-            Expires {new Date(magicLinkExpiresAt).toLocaleTimeString()}.
+            Check your email for the magic link token. Expires {new Date(magicLinkExpiresAt).toLocaleTimeString()}.
           </div>
           <label>
             Enter token
@@ -252,8 +247,4 @@
     background: #1e293b;
   }
 
-  .token {
-    font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
-      'Courier New', monospace;
-  }
 </style>
