@@ -61,8 +61,15 @@ npx convex deploy
 
 ### Configure base path (only if not using a custom domain)
 
-If you are hosting at `https://<user>.github.io/<repo>/`, set a repository variable named `BASE_PATH` to `/<repo>`.
+If you are hosting at `https://<user>.github.io/<repo>/`, set a **repository variable** named `BASE_PATH` to `/<repo>`.
 For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
+(`BASE_PATH` is not sensitive, so a variable is appropriate—not a secret.)
+
+**How to set `BASE_PATH` in GitHub:**
+1. Go to **Settings → Secrets and variables → Actions**.
+2. Under **Variables**, click **New repository variable**.
+3. Set **Name** to `BASE_PATH`.
+4. Set **Value** to `/<repo>` (replace `<repo>` with your repository name), then click **Add variable**.
 
 **How to set `BASE_PATH` in GitHub:**
 1. Go to **Settings → Secrets and variables → Actions**.
@@ -72,7 +79,23 @@ For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
 
 ### Configure environment variables
 
-Add a repository variable named `VITE_CONVEX_URL` with your Convex deployment URL so the build can complete.
+Add **either** a **repository variable** *or* an **environment variable** named `VITE_CONVEX_URL` with your Convex deployment URL so the build can complete.
+Only one is needed.
+Use a **repository variable** if the value is the same for every deployment and you want the simplest setup.
+Use an **environment variable** if you need different values per environment (for example, preview vs. production) or if you use environment protection rules like required reviewers.
+(`VITE_CONVEX_URL` is typically public, so a variable is appropriate—not a secret.)
+
+**How to set `VITE_CONVEX_URL` in GitHub (repository variable):**
+1. Go to **Settings → Secrets and variables → Actions**.
+2. Under **Variables**, click **New repository variable**.
+3. Set **Name** to `VITE_CONVEX_URL`.
+4. Set **Value** to your Convex deployment URL (for example, `https://<your-team>.convex.cloud`), then click **Add variable**.
+
+**How to set `VITE_CONVEX_URL` in GitHub (environment variable):**
+1. Go to **Settings → Environments** and select `github-pages` (or create it).
+2. Under **Environment variables**, click **Add variable**.
+3. Set **Name** to `VITE_CONVEX_URL`.
+4. Set **Value** to your Convex deployment URL, then click **Add variable**.
 
 **How to set `VITE_CONVEX_URL` in GitHub:**
 1. Go to **Settings → Secrets and variables → Actions**.
