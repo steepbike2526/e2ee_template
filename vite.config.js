@@ -2,6 +2,9 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { SvelteKitPWA } from '@vite-pwa/sveltekit';
 import { fileURLToPath } from 'node:url';
 
+const repository = process.env.GITHUB_REPOSITORY?.split('/')[1];
+const basePath = process.env.BASE_PATH ?? (repository ? `/${repository}` : '');
+
 const config = {
   plugins: [
     sveltekit(),
@@ -9,13 +12,13 @@ const config = {
       manifest: {
         name: 'E2EE Notes Demo',
         short_name: 'E2EE Notes',
-        start_url: '/',
+        start_url: basePath || '/',
         display: 'standalone',
         background_color: '#0f172a',
         theme_color: '#0f172a',
         icons: [
           {
-            src: '/pwa-icon.svg',
+            src: `${basePath}/pwa-icon.svg`,
             sizes: '512x512',
             type: 'image/svg+xml'
           }

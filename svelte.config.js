@@ -1,6 +1,9 @@
 import adapter from '@sveltejs/adapter-static';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
+const repository = process.env.GITHUB_REPOSITORY?.split('/')[1];
+const basePath = process.env.BASE_PATH ?? (repository ? `/${repository}` : '');
+
 const config = {
   preprocess: vitePreprocess(),
   kit: {
@@ -8,7 +11,7 @@ const config = {
       fallback: '200.html'
     }),
     paths: {
-      base: process.env.BASE_PATH ?? ''
+      base: basePath
     },
     serviceWorker: {
       register: false
