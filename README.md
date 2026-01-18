@@ -64,9 +64,21 @@ npx convex deploy
 If you are hosting at `https://<user>.github.io/<repo>/`, set a repository variable named `BASE_PATH` to `/<repo>`.
 For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
 
+**How to set `BASE_PATH` in GitHub:**
+1. Go to **Settings → Secrets and variables → Actions**.
+2. Under **Variables**, click **New repository variable**.
+3. Set **Name** to `BASE_PATH`.
+4. Set **Value** to `/<repo>` (replace `<repo>` with your repository name), then click **Add variable**.
+
 ### Configure environment variables
 
 Add a repository variable named `VITE_CONVEX_URL` with your Convex deployment URL so the build can complete.
+
+**How to set `VITE_CONVEX_URL` in GitHub:**
+1. Go to **Settings → Secrets and variables → Actions**.
+2. Under **Variables**, click **New repository variable**.
+3. Set **Name** to `VITE_CONVEX_URL`.
+4. Set **Value** to your Convex deployment URL (for example, `https://<your-team>.convex.cloud`), then click **Add variable**.
 
 ### Custom domain
 
