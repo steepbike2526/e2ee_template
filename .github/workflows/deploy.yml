@@ -38,8 +38,8 @@ jobs:
 
       - name: Validate Pages output
         run: |
-          if [ ! -f build/index.html ] && [ ! -f build/200.html ]; then
-            echo "Expected build/index.html or build/200.html to exist. Check the build output for errors." >&2
+          if [ ! -f build/index.html ]; then
+            echo "Expected build/index.html to exist. Check the build output for errors." >&2
             ls -la build >&2
             exit 1
           fi
