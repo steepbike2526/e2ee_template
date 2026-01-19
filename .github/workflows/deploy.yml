@@ -32,7 +32,7 @@ jobs:
 
       - name: Build
         env:
-          BASE_PATH: ${{ vars.BASE_PATH }}
+          BASE_PATH: ${{ vars.BASE_PATH || format('/{0}', github.event.repository.name) }}
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
         run: npm run build
 
