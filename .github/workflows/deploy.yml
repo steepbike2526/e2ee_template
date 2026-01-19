@@ -36,6 +36,14 @@ jobs:
           VITE_CONVEX_URL: ${{ vars.VITE_CONVEX_URL }}
         run: npm run build
 
+      - name: Validate Pages output
+        run: |
+          if [ ! -f build/index.html ]; then
+            echo "Expected build/index.html to exist. Check the build output for errors." >&2
+            ls -la build >&2
+            exit 1
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
