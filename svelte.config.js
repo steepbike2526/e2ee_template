@@ -14,7 +14,7 @@ const config = {
       base: basePath
     },
     prerender: {
-      default: true
+      entries: ['*']
     },
     serviceWorker: {
       register: false
