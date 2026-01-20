@@ -31,11 +31,16 @@ jobs:
         run: npm ci
 
       - name: Deploy Convex (optional)
-        if: ${{ vars.CONVEX_DEPLOYMENT != '' && secrets.CONVEX_DEPLOY_KEY != '' }}
+        if: ${{ vars.CONVEX_DEPLOYMENT != '' }}
         env:
           CONVEX_DEPLOYMENT: ${{ vars.CONVEX_DEPLOYMENT }}
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
-        run: npx convex deploy
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "CONVEX_DEPLOY_KEY not set; skipping Convex deploy."
+            exit 0
+          fi
+          npx convex deploy
 
       - name: Build
         env:
