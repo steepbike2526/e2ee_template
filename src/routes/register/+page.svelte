@@ -50,23 +50,26 @@
       const wrappedDek = await wrapDekForDevice(dek, deviceBundle.deviceKey);
       const masterWrappedDek = await wrapDekWithMasterKey(dek, masterKey.keyBytes);
 
-      await registerDevice({
-        sessionToken: response.sessionToken,
+      let currentSessionToken = response.sessionToken;
+      const deviceResponse = await registerDevice({
+        sessionToken: currentSessionToken,
         deviceId: deviceBundle.deviceId,
         wrappedDek: wrappedDek.ciphertext,
         wrapNonce: wrappedDek.nonce,
         version: 1
       });
+      currentSessionToken = deviceResponse.sessionToken ?? currentSessionToken;
 
-      await storeMasterWrappedDek({
-        sessionToken: response.sessionToken,
+      const masterResponse = await storeMasterWrappedDek({
+        sessionToken: currentSessionToken,
         wrappedDek: masterWrappedDek.ciphertext,
         wrapNonce: masterWrappedDek.nonce,
         version: 1
       });
+      currentSessionToken = masterResponse.sessionToken ?? currentSessionToken;
 
       await setSession({
-        sessionToken: response.sessionToken,
+        sessionToken: currentSessionToken,
         userId: response.userId,
         username: response.username,
         e2eeSalt: response.e2eeSalt,

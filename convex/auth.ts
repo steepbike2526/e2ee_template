@@ -1,6 +1,6 @@
-import { mutation, query } from './_generated/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
-import { createSession } from './lib/session';
+import { createSession, getSessionUser } from './lib/session';
 import { generateTotpSecret, verifyTotpCode } from './lib/totp';
 import { decryptSecret, encryptSecret } from './lib/secrets';
 import { enforceRateLimit } from './lib/rateLimit';
@@ -200,38 +200,32 @@ export const storeMasterWrappedDek = mutation({
     version: v.number()
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.sessionToken))
-      .unique();
-    if (!session || session.expiresAt < Date.now()) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
-    await ctx.db.patch(session.userId, {
+    await ctx.db.patch(session.user._id, {
       masterWrappedDek: args.wrappedDek,
       masterWrapNonce: args.wrapNonce,
       masterWrapVersion: args.version
     });
 
-    return { ok: true };
+    return { ok: true, sessionToken: session.sessionToken };
   }
 });
 
-export const getMasterWrappedDek = query({
+export const getMasterWrappedDek = mutation({
   args: {
     sessionToken: v.string()
   },
   handler: async (ctx, args) => {
-    const session = await ctx.db
-      .query('sessions')
-      .withIndex('by_token', (q) => q.eq('token', args.sessionToken))
-      .unique();
-    if (!session || session.expiresAt < Date.now()) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
-    const user = await ctx.db.get(session.userId);
+    const user = session.user;
     if (!user?.masterWrappedDek || !user.masterWrapNonce || !user.masterWrapVersion) {
       throw new Error('Master-wrapped DEK is not available.');
     }
@@ -239,7 +233,8 @@ export const getMasterWrappedDek = query({
     return {
       wrappedDek: user.masterWrappedDek,
       wrapNonce: user.masterWrapNonce,
-      version: user.masterWrapVersion
+      version: user.masterWrapVersion,
+      sessionToken: session.sessionToken
     };
   }
 });

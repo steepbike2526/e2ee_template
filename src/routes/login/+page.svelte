@@ -2,11 +2,12 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { deriveMasterKey } from '$lib/crypto/keys';
   import { fetchDeviceDek, fetchMasterWrappedDek, loginWithTotp, registerDevice, requestMagicLink, verifyMagicLink } from '$lib/api';
   import { createDeviceKeyBundle, loadDeviceKey, unwrapDekForDevice, unwrapDekWithMasterKey, wrapDekForDevice } from '$lib/e2ee';
   import { setSession } from '$lib/session';
-  import { dekStore } from '$lib/state';
+  import { dekStore, sessionStore } from '$lib/state';
   import { readAnyDeviceRecord } from '$lib/storage/device';
 
   const savedEmailKey = 'e2ee:lastEmail';
@@ -27,6 +28,14 @@
     const savedEmail = localStorage.getItem(savedEmailKey);
     if (savedEmail && !email) {
       email = savedEmail;
+    }
+    const storedSession = get(sessionStore);
+    const dek = get(dekStore);
+    if (storedSession && !dek) {
+      pendingSession = storedSession;
+      step = 'decrypt';
+    } else if (storedSession && dek) {
+      goto(`${base}/demo`);
     }
   });
 
@@ -107,12 +116,14 @@
     try {
       const deviceRecord = await readAnyDeviceRecord();
       let deviceId = deviceRecord?.deviceId ?? '';
+      let currentSessionToken = pendingSession.sessionToken;
       const masterKey = await deriveMasterKey(passphrase, pendingSession.e2eeSalt);
       let dek;
       if (deviceId) {
         try {
           const deviceKey = await loadDeviceKey(deviceId, masterKey.keyBytes);
-          const wrappedDek = await fetchDeviceDek({ sessionToken: pendingSession.sessionToken, deviceId });
+          const wrappedDek = await fetchDeviceDek({ sessionToken: currentSessionToken, deviceId });
+          currentSessionToken = wrappedDek.sessionToken ?? currentSessionToken;
           dek = await unwrapDekForDevice({
             ciphertext: wrappedDek.wrappedDek,
             nonce: wrappedDek.wrapNonce
@@ -124,25 +135,27 @@
       }
 
       if (!deviceId) {
-        const masterWrappedDek = await fetchMasterWrappedDek({ sessionToken: pendingSession.sessionToken });
+        const masterWrappedDek = await fetchMasterWrappedDek({ sessionToken: currentSessionToken });
+        currentSessionToken = masterWrappedDek.sessionToken ?? currentSessionToken;
         dek = await unwrapDekWithMasterKey({
           ciphertext: masterWrappedDek.wrappedDek,
           nonce: masterWrappedDek.wrapNonce
         }, masterKey.keyBytes);
         const deviceBundle = await createDeviceKeyBundle(masterKey.keyBytes);
         const wrappedDekForDevice = await wrapDekForDevice(dek, deviceBundle.deviceKey);
-        await registerDevice({
-          sessionToken: pendingSession.sessionToken,
+        const deviceResponse = await registerDevice({
+          sessionToken: currentSessionToken,
           deviceId: deviceBundle.deviceId,
           wrappedDek: wrappedDekForDevice.ciphertext,
           wrapNonce: wrappedDekForDevice.nonce,
           version: 1
         });
+        currentSessionToken = deviceResponse.sessionToken ?? currentSessionToken;
         deviceId = deviceBundle.deviceId;
       }
 
       await setSession({
-        sessionToken: pendingSession.sessionToken,
+        sessionToken: currentSessionToken,
         userId: pendingSession.userId,
         username: pendingSession.username,
         e2eeSalt: pendingSession.e2eeSalt,

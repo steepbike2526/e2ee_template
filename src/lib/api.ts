@@ -1,5 +1,12 @@
 import { api } from '../../convex/_generated/api';
 import { getConvexClient } from './convexClient';
+import { updateSessionToken } from './session';
+
+const refreshSessionToken = (response: { sessionToken?: string }) => {
+  if (response?.sessionToken) {
+    updateSessionToken(response.sessionToken);
+  }
+};
 
 export async function registerUser(payload: {
   username: string;
@@ -32,7 +39,9 @@ export async function registerDevice(payload: {
   wrapNonce: string;
   version: number;
 }) {
-  return getConvexClient().mutation(api.devices.registerDevice, payload);
+  const response = await getConvexClient().mutation(api.devices.registerDevice, payload);
+  refreshSessionToken(response);
+  return response;
 }
 
 export async function storeMasterWrappedDek(payload: {
@@ -41,15 +50,21 @@ export async function storeMasterWrappedDek(payload: {
   wrapNonce: string;
   version: number;
 }) {
-  return getConvexClient().mutation(api.auth.storeMasterWrappedDek, payload);
+  const response = await getConvexClient().mutation(api.auth.storeMasterWrappedDek, payload);
+  refreshSessionToken(response);
+  return response;
 }
 
 export async function fetchMasterWrappedDek(payload: { sessionToken: string }) {
-  return getConvexClient().query(api.auth.getMasterWrappedDek, payload);
+  const response = await getConvexClient().mutation(api.auth.getMasterWrappedDek, payload);
+  refreshSessionToken(response);
+  return response;
 }
 
 export async function fetchDeviceDek(payload: { sessionToken: string; deviceId: string }) {
-  return getConvexClient().query(api.devices.getWrappedDek, payload);
+  const response = await getConvexClient().mutation(api.devices.getWrappedDek, payload);
+  refreshSessionToken(response);
+  return response;
 }
 
 export async function createNote(payload: {
@@ -60,9 +75,13 @@ export async function createNote(payload: {
   version: number;
   createdAt: number;
 }) {
-  return getConvexClient().mutation(api.notes.createNote, payload);
+  const response = await getConvexClient().mutation(api.notes.createNote, payload);
+  refreshSessionToken(response);
+  return response;
 }
 
 export async function listNotes(payload: { sessionToken: string }) {
-  return getConvexClient().query(api.notes.listNotes, payload);
+  const response = await getConvexClient().mutation(api.notes.listNotes, payload);
+  refreshSessionToken(response);
+  return response;
 }
