@@ -90,13 +90,39 @@
   const handleLogout = async () => {
     const session = $sessionStore;
     if (!session) return;
-    await revokeSession({ sessionToken: session.sessionToken });
-    clearUnsafeDek(session.userId);
-    await clearSession();
+    const loginPath = `${base}/login`;
+    try {
+      await revokeSession({ sessionToken: session.sessionToken });
+    } catch (err) {
+      console.warn('Failed to revoke session.', err);
+    } finally {
+      clearUnsafeDek(session.userId);
+      await clearSession();
+      try {
+        await goto(loginPath, { replaceState: true });
+      } catch (err) {
+        console.warn('Failed to navigate to login.', err);
+        if (browser) {
+          window.location.assign(loginPath);
+        }
+      }
+    }
   };
 
   const withBase = (path) => `${base}${path}`;
   const applyUpdate = () => updateSW?.(true);
+
+  const protectedRoutes = new Set(['/notes', '/settings']);
+
+  $: if (browser) {
+    const loginPath = `${base}/login`;
+    if ($sessionStore && !$dekStore && $page.url.pathname !== loginPath) {
+      goto(loginPath);
+    }
+    if (!$sessionStore && protectedRoutes.has($page.url.pathname)) {
+      goto(loginPath);
+    }
+  }
 </script>
 
 <svelte:head>

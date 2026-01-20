@@ -37,7 +37,11 @@ export async function createDeviceKeyBundle(masterKeyBytes: Uint8Array): Promise
   return bundle;
 }
 
-export async function loadDeviceKey(deviceId: string, masterKeyBytes: Uint8Array): Promise<CryptoKey> {
+export async function loadDeviceKey(
+  deviceId: string,
+  masterKeyBytes: Uint8Array,
+  extractable = false
+): Promise<CryptoKey> {
   const record = await readDeviceRecord(deviceId);
   if (!record) {
     throw new Error('Device key not found on this device.');
@@ -45,7 +49,7 @@ export async function loadDeviceKey(deviceId: string, masterKeyBytes: Uint8Array
   const masterKey = await importAesKey(masterKeyBytes);
   const aad = deriveDeviceKeyLabel(deviceId);
   const rawKey = await decryptWithKey(masterKey, { nonce: record.deviceKeyNonce, ciphertext: record.encryptedDeviceKey }, aad);
-  return importAesKey(rawKey);
+  return importAesKey(rawKey, extractable);
 }
 
 export async function wrapDekForDevice(dek: CryptoKey, deviceKey: CryptoKey) {
