@@ -55,7 +55,7 @@ export async function wrapDekForDevice(dek: CryptoKey, deviceKey: CryptoKey) {
 
 export async function unwrapDekForDevice(payload: { ciphertext: string; nonce: string }, deviceKey: CryptoKey) {
   const rawDek = await decryptWithKey(deviceKey, payload);
-  return importAesKey(rawDek);
+  return importAesKey(rawDek, true);
 }
 
 export async function wrapDekWithMasterKey(dek: CryptoKey, masterKeyBytes: Uint8Array) {
@@ -67,5 +67,5 @@ export async function wrapDekWithMasterKey(dek: CryptoKey, masterKeyBytes: Uint8
 export async function unwrapDekWithMasterKey(payload: { ciphertext: string; nonce: string }, masterKeyBytes: Uint8Array) {
   const masterKey = await importAesKey(masterKeyBytes);
   const rawDek = await decryptWithKey(masterKey, payload);
-  return importAesKey(rawDek);
+  return importAesKey(rawDek, true);
 }

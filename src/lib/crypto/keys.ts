@@ -39,9 +39,9 @@ export function generateRandomSalt(): string {
   return bytesToBase64(salt);
 }
 
-export async function importAesKey(rawKey: Uint8Array): Promise<CryptoKey> {
+export async function importAesKey(rawKey: Uint8Array, extractable = false): Promise<CryptoKey> {
   const keyData = toByteArray(rawKey);
-  return crypto.subtle.importKey('raw', keyData, { name: 'AES-GCM' }, false, [
+  return crypto.subtle.importKey('raw', keyData, { name: 'AES-GCM' }, extractable, [
     'encrypt',
     'decrypt'
   ]);
