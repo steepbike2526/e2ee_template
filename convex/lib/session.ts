@@ -1,6 +1,6 @@
 import { Id } from '../_generated/dataModel';
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24;
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 
 export function generateSessionToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -18,6 +18,13 @@ export async function createSession(ctx: any, userId: Id<'users'>) {
   return { token, expiresAt };
 }
 
+async function refreshSession(ctx: any, session: any) {
+  const token = generateSessionToken();
+  const expiresAt = Date.now() + SESSION_TTL_MS;
+  await ctx.db.patch(session._id, { token, expiresAt });
+  return { token, expiresAt };
+}
+
 export async function getSessionUser(ctx: any, token: string) {
   const session = await ctx.db
     .query('sessions')
@@ -27,5 +34,9 @@ export async function getSessionUser(ctx: any, token: string) {
     return null;
   }
   const user = await ctx.db.get(session.userId);
-  return user;
+  if (!user) {
+    return null;
+  }
+  const refreshed = await refreshSession(ctx, session);
+  return { user, sessionToken: refreshed.token };
 }

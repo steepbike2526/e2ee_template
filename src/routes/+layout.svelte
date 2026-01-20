@@ -1,16 +1,25 @@
 <script>
   import { onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
   import { base } from '$app/paths';
-  import { onlineStore, sessionStore, syncStatusStore } from '$lib/state';
+  import { page } from '$app/stores';
+  import { dekStore, onlineStore, sessionStore, syncStatusStore } from '$lib/state';
   import { revokeSession } from '$lib/api';
-  import { clearSession } from '$lib/session';
+  import { clearSession, restoreSession } from '$lib/session';
   import { registerSW } from 'virtual:pwa-register';
   import '../app.css';
 
   onMount(async () => {
     if (!browser) return;
     registerSW({ immediate: true });
+    const session = await restoreSession();
+    const dek = get(dekStore);
+    const loginPath = `${base}/login`;
+    if (session && !dek && get(page).url.pathname !== loginPath) {
+      await goto(loginPath);
+    }
     const updateOnline = () => onlineStore.set(navigator.onLine);
     updateOnline();
     window.addEventListener('online', updateOnline);

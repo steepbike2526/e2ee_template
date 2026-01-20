@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getSessionUser } from './lib/session';
 
@@ -11,14 +11,14 @@ export const registerDevice = mutation({
     version: v.number()
   },
   handler: async (ctx, args) => {
-    const user = await getSessionUser(ctx, args.sessionToken);
-    if (!user) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
     const existing = await ctx.db
       .query('devices')
-      .withIndex('by_user_device', (q) => q.eq('userId', user._id).eq('deviceId', args.deviceId))
+      .withIndex('by_user_device', (q) => q.eq('userId', session.user._id).eq('deviceId', args.deviceId))
       .unique();
 
     if (existing) {
@@ -27,11 +27,11 @@ export const registerDevice = mutation({
         wrapNonce: args.wrapNonce,
         version: args.version
       });
-      return { deviceId: args.deviceId };
+      return { deviceId: args.deviceId, sessionToken: session.sessionToken };
     }
 
     await ctx.db.insert('devices', {
-      userId: user._id,
+      userId: session.user._id,
       deviceId: args.deviceId,
       wrappedDek: args.wrappedDek,
       wrapNonce: args.wrapNonce,
@@ -39,24 +39,24 @@ export const registerDevice = mutation({
       createdAt: Date.now()
     });
 
-    return { deviceId: args.deviceId };
+    return { deviceId: args.deviceId, sessionToken: session.sessionToken };
   }
 });
 
-export const getWrappedDek = query({
+export const getWrappedDek = mutation({
   args: {
     sessionToken: v.string(),
     deviceId: v.string()
   },
   handler: async (ctx, args) => {
-    const user = await getSessionUser(ctx, args.sessionToken);
-    if (!user) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
     const device = await ctx.db
       .query('devices')
-      .withIndex('by_user_device', (q) => q.eq('userId', user._id).eq('deviceId', args.deviceId))
+      .withIndex('by_user_device', (q) => q.eq('userId', session.user._id).eq('deviceId', args.deviceId))
       .unique();
 
     if (!device) {
@@ -66,7 +66,8 @@ export const getWrappedDek = query({
     return {
       wrappedDek: device.wrappedDek,
       wrapNonce: device.wrapNonce,
-      version: device.version
+      version: device.version,
+      sessionToken: session.sessionToken
     };
   }
 });

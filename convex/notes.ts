@@ -1,4 +1,4 @@
-import { mutation, query } from './_generated/server';
+import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getSessionUser } from './lib/session';
 
@@ -12,13 +12,13 @@ export const createNote = mutation({
     createdAt: v.number()
   },
   handler: async (ctx, args) => {
-    const user = await getSessionUser(ctx, args.sessionToken);
-    if (!user) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
     await ctx.db.insert('notes', {
-      userId: user._id,
+      userId: session.user._id,
       ciphertext: args.ciphertext,
       nonce: args.nonce,
       aad: args.aad,
@@ -26,32 +26,35 @@ export const createNote = mutation({
       createdAt: args.createdAt
     });
 
-    return { success: true };
+    return { success: true, sessionToken: session.sessionToken };
   }
 });
 
-export const listNotes = query({
+export const listNotes = mutation({
   args: {
     sessionToken: v.string()
   },
   handler: async (ctx, args) => {
-    const user = await getSessionUser(ctx, args.sessionToken);
-    if (!user) {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
       throw new Error('Unauthorized');
     }
 
     const notes = await ctx.db
       .query('notes')
-      .withIndex('by_user', (q) => q.eq('userId', user._id))
+      .withIndex('by_user', (q) => q.eq('userId', session.user._id))
       .collect();
 
-    return notes.map((note) => ({
-      id: note._id,
-      ciphertext: note.ciphertext,
-      nonce: note.nonce,
-      aad: note.aad,
-      version: note.version,
-      createdAt: note.createdAt
-    }));
+    return {
+      sessionToken: session.sessionToken,
+      notes: notes.map((note) => ({
+        id: note._id,
+        ciphertext: note.ciphertext,
+        nonce: note.nonce,
+        aad: note.aad,
+        version: note.version,
+        createdAt: note.createdAt
+      }))
+    };
   }
 });

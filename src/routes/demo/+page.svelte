@@ -50,7 +50,7 @@
     const session = get(sessionStore);
     if (!session) return;
     const remote = await listNotes({ sessionToken: session.sessionToken });
-    const annotated = remote.map((note) => ({ ...note, userId: session.userId }));
+    const annotated = remote.notes.map((note) => ({ ...note, userId: session.userId }));
     await cacheNotes(annotated);
     await hydrateNotes(annotated);
   };
