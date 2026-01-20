@@ -103,6 +103,15 @@ Use an **environment variable** if you need different values per environment (fo
 3. Set **Name** to `VITE_CONVEX_URL`.
 4. Set **Value** to your Convex deployment URL (for example, `https://<your-team>.convex.cloud`), then click **Add variable**.
 
+### Optional: Deploy Convex from GitHub Actions
+
+If you want the GitHub Pages workflow to deploy Convex automatically, set:
+
+- **Repository variable** `CONVEX_DEPLOYMENT` (example: `your-team:prod`)
+- **Repository secret** `CONVEX_DEPLOY_KEY` (from the Convex dashboard; required for non-interactive CI auth)
+
+When both are present, the workflow runs `npx convex deploy` before the frontend build.
+
 ### Custom domain
 
 1. In **Settings → Pages**, set your custom domain (e.g., `notes.example.com`). GitHub will create a `CNAME` file.

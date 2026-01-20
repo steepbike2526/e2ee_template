@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Deploy Convex (optional)
+        if: ${{ vars.CONVEX_DEPLOYMENT != '' && secrets.CONVEX_DEPLOY_KEY != '' }}
+        env:
+          CONVEX_DEPLOYMENT: ${{ vars.CONVEX_DEPLOYMENT }}
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy
+
       - name: Build
         env:
           BASE_PATH: ${{ vars.BASE_PATH || format('/{0}', github.event.repository.name) }}
