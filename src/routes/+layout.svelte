@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { browser } from '$app/environment';
+  import { base } from '$app/paths';
   import { onlineStore, sessionStore, syncStatusStore } from '$lib/state';
   import { revokeSession } from '$lib/api';
   import { clearSession } from '$lib/session';
@@ -27,6 +28,8 @@
     await revokeSession({ sessionToken: session.sessionToken });
     await clearSession();
   };
+
+  const withBase = (path) => `${base}${path}`;
 </script>
 
 <svelte:head>
@@ -37,10 +40,10 @@
   <header class="app__header">
     <h1>E2EE Notes Demo</h1>
     <nav>
-      <a href="/">Home</a>
-      <a href="/register">Register</a>
-      <a href="/login">Login</a>
-      <a href="/demo">Demo</a>
+      <a href={withBase('/')}>Home</a>
+      <a href={withBase('/register')}>Register</a>
+      <a href={withBase('/login')}>Login</a>
+      <a href={withBase('/demo')}>Demo</a>
       {#if $sessionStore}
         <button type="button" class="logout" on:click={handleLogout}>Logout</button>
       {/if}
