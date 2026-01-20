@@ -54,6 +54,21 @@ npm run dev
 
 Visit http://localhost:5173
 
+## Versioning
+
+The app version lives in `src/lib/version.ts` and is bumped by `scripts/bump-version.js`.
+Use the following npm scripts to manage version updates:
+
+```bash
+npm run version:major
+npm run version:minor
+npm run version:patch
+```
+
+Running `version:major` or `version:minor` resets the patch number to `0` as part of the
+script logic. To auto-bump the patch version without Husky, rely on the existing
+`prebuild` hook, which runs before `npm run build` (including in CI).
+
 ## Deployment (Vercel)
 
 1. Create a new Vercel project from this repository.
