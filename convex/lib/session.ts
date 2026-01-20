@@ -1,6 +1,7 @@
 import { Id } from '../_generated/dataModel';
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const SESSION_REFRESH_WINDOW_MS = 1000 * 60 * 60 * 24;
 
 export function generateSessionToken() {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -37,6 +38,10 @@ export async function getSessionUser(ctx: any, token: string) {
   if (!user) {
     return null;
   }
-  const refreshed = await refreshSession(ctx, session);
-  return { user, sessionToken: refreshed.token };
+  const shouldRefresh = session.expiresAt - Date.now() < SESSION_REFRESH_WINDOW_MS;
+  if (shouldRefresh) {
+    const refreshed = await refreshSession(ctx, session);
+    return { user, sessionToken: refreshed.token };
+  }
+  return { user, sessionToken: session.token };
 }
