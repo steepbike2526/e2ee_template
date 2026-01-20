@@ -9,10 +9,12 @@
   import { setSession } from '$lib/session';
   import { dekStore, sessionStore } from '$lib/state';
   import { readAnyDeviceRecord } from '$lib/storage/device';
+  import { getAuthMethodPreference, getDeviceSettings, setAuthMethodPreference, storeUnsafeDek } from '$lib/deviceSettings';
+  import { promptBiometric } from '$lib/biometrics';
 
   const savedEmailKey = 'e2ee:lastEmail';
 
-  let method = 'magic';
+  let method = getAuthMethodPreference();
   let username = '';
   let email = '';
   let token = '';
@@ -35,7 +37,7 @@
       pendingSession = storedSession;
       step = 'decrypt';
     } else if (storedSession && dek) {
-      goto(`${base}/demo`);
+      goto(`${base}/notes`);
     }
   });
 
@@ -114,6 +116,10 @@
     }
     loading = true;
     try {
+      const deviceSettings = getDeviceSettings(pendingSession.userId);
+      if (deviceSettings.biometricsEnabled && deviceSettings.biometricCredentialId) {
+        await promptBiometric(deviceSettings.biometricCredentialId);
+      }
       const deviceRecord = await readAnyDeviceRecord();
       let deviceId = deviceRecord?.deviceId ?? '';
       let currentSessionToken = pendingSession.sessionToken;
@@ -162,7 +168,10 @@
         deviceId
       });
       dekStore.set(dek);
-      await goto(`${base}/demo`);
+      if (deviceSettings.allowUnsafeDekCache) {
+        await storeUnsafeDek(pendingSession.userId, deviceId, dek);
+      }
+      await goto(`${base}/notes`);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unlock failed.';
     } finally {
@@ -177,10 +186,24 @@
 
   {#if step === 'auth'}
     <div class="tabs">
-      <button class:active={method === 'magic'} on:click={() => (method = 'magic')} type="button">
+      <button
+        class:active={method === 'magic'}
+        on:click={() => {
+          method = 'magic';
+          setAuthMethodPreference('magic');
+        }}
+        type="button"
+      >
         Magic link
       </button>
-      <button class:active={method === 'totp'} on:click={() => (method = 'totp')} type="button">
+      <button
+        class:active={method === 'totp'}
+        on:click={() => {
+          method = 'totp';
+          setAuthMethodPreference('totp');
+        }}
+        type="button"
+      >
         TOTP
       </button>
     </div>

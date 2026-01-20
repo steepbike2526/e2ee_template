@@ -61,6 +61,18 @@ export async function fetchMasterWrappedDek(payload: { sessionToken: string }) {
   return response;
 }
 
+export async function updatePassphrase(payload: {
+  sessionToken: string;
+  e2eeSalt: string;
+  wrappedDek: string;
+  wrapNonce: string;
+  version: number;
+}) {
+  const response = await getConvexClient().mutation(api.auth.updatePassphrase, payload);
+  refreshSessionToken(response);
+  return response;
+}
+
 export async function fetchDeviceDek(payload: { sessionToken: string; deviceId: string }) {
   const response = await getConvexClient().mutation(api.devices.getWrappedDek, payload);
   refreshSessionToken(response);
