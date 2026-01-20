@@ -239,6 +239,31 @@ export const getMasterWrappedDek = mutation({
   }
 });
 
+export const updatePassphrase = mutation({
+  args: {
+    sessionToken: v.string(),
+    e2eeSalt: v.string(),
+    wrappedDek: v.string(),
+    wrapNonce: v.string(),
+    version: v.number()
+  },
+  handler: async (ctx, args) => {
+    const session = await getSessionUser(ctx, args.sessionToken);
+    if (!session) {
+      throw new Error('Unauthorized');
+    }
+
+    await ctx.db.patch(session.user._id, {
+      e2eeSalt: args.e2eeSalt,
+      masterWrappedDek: args.wrappedDek,
+      masterWrapNonce: args.wrapNonce,
+      masterWrapVersion: args.version
+    });
+
+    return { ok: true, sessionToken: session.sessionToken };
+  }
+});
+
 export const revokeSession = mutation({
   args: {
     sessionToken: v.string()

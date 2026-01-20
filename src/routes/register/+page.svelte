@@ -80,7 +80,7 @@
       totpSecret = response.totpSecret ?? '';
       registrationComplete = true;
       if (!totpSecret && !generatedPassphrase) {
-        await goto(`${base}/demo`);
+        await goto(`${base}/notes`);
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Registration failed.';
@@ -90,7 +90,7 @@
   };
 
   const handleContinue = async () => {
-    await goto(`${base}/demo`);
+    await goto(`${base}/notes`);
   };
 </script>
 
