@@ -9,9 +9,11 @@ export async function cacheNotes(notes: CachedNote[]) {
   await tx.done;
 }
 
-export async function readCachedNotes(): Promise<CachedNote[]> {
+export async function readCachedNotes(userId?: string): Promise<CachedNote[]> {
   const db = await openNotesDb();
-  return db.getAll('cachedNotes');
+  const notes = await db.getAll('cachedNotes');
+  if (!userId) return notes;
+  return notes.filter((note) => !note.userId || note.userId === userId);
 }
 
 export async function addPendingNote(note: PendingNote) {
@@ -19,9 +21,11 @@ export async function addPendingNote(note: PendingNote) {
   await db.put('pendingNotes', note);
 }
 
-export async function readPendingNotes(): Promise<PendingNote[]> {
+export async function readPendingNotes(userId?: string): Promise<PendingNote[]> {
   const db = await openNotesDb();
-  return db.getAll('pendingNotes');
+  const notes = await db.getAll('pendingNotes');
+  if (!userId) return notes;
+  return notes.filter((note) => !note.userId || note.userId === userId);
 }
 
 export async function removePendingNote(id: string) {

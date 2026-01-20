@@ -2,6 +2,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 
 export type PendingNote = {
   id: string;
+  userId: string;
   ciphertext: string;
   nonce: string;
   aad: string;
