@@ -25,6 +25,19 @@ npx convex dev
 
 This will create a `.env.local` file with your `CONVEX_URL`.
 
+If you plan to enable TOTP during registration, set a 32-byte base64 secret for
+Convex so TOTP secrets can be encrypted at rest. You only need to set this once
+per Convex deployment; changing it later will prevent existing TOTP secrets from
+decrypting.
+
+```bash
+npx convex env set TOTP_ENCRYPTION_KEY "<32-byte-base64>"
+```
+
+For production, set the variable on your production Convex deployment (e.g.
+via the Convex dashboard or `npx convex env set` while targeting the prod
+deployment) and keep it stable across deploys.
+
 ### 3) Configure the web app
 
 Create `.env` (or `.env.local`) in the repo root:
