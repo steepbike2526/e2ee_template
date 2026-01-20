@@ -14,7 +14,14 @@ const config = {
       base: basePath
     },
     prerender: {
-      entries: ['*']
+      entries: ['*'],
+      handleHttpError: ({ path, message }) => {
+        if (basePath && path === '/') {
+          return;
+        }
+
+        throw new Error(message);
+      }
     },
     serviceWorker: {
       register: false
