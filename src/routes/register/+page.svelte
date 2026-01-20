@@ -1,5 +1,6 @@
 <script>
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { createDeviceKeyBundle, wrapDekForDevice, wrapDekWithMasterKey } from '$lib/e2ee';
   import { deriveMasterKey, generateAesKey } from '$lib/crypto/keys';
   import { registerDevice, registerUser, storeMasterWrappedDek } from '$lib/api';
@@ -76,7 +77,7 @@
       totpSecret = response.totpSecret ?? '';
       registrationComplete = true;
       if (!totpSecret && !generatedPassphrase) {
-        await goto('/demo');
+        await goto(`${base}/demo`);
       }
     } catch (err) {
       error = err instanceof Error ? err.message : 'Registration failed.';
@@ -86,7 +87,7 @@
   };
 
   const handleContinue = async () => {
-    await goto('/demo');
+    await goto(`${base}/demo`);
   };
 </script>
 
