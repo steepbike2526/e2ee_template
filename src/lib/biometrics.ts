@@ -37,7 +37,8 @@ export const registerBiometricCredential = async (userId: string) => {
       },
       pubKeyCredParams: [{ type: 'public-key', alg: -7 }],
       authenticatorSelection: {
-        userVerification: 'required'
+        userVerification: 'required',
+        authenticatorAttachment: 'platform'
       },
       timeout: 60_000,
       attestation: 'none'
@@ -64,7 +65,8 @@ export const promptBiometric = async (credentialId: string) => {
       allowCredentials: [
         {
           id: rawId,
-          type: 'public-key'
+          type: 'public-key',
+          transports: ['internal']
         }
       ],
       userVerification: 'required',

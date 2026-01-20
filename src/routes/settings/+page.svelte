@@ -134,7 +134,7 @@
       });
 
       if (session.deviceId) {
-        const deviceKey = await loadDeviceKey(session.deviceId, currentMasterKey.keyBytes);
+        const deviceKey = await loadDeviceKey(session.deviceId, currentMasterKey.keyBytes, true);
         const rawDeviceKey = await exportRawKey(deviceKey);
         const newMasterCryptoKey = await importAesKey(newMasterKey.keyBytes);
         const aad = deriveDeviceKeyLabel(session.deviceId);
