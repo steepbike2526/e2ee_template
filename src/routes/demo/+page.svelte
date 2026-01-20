@@ -13,7 +13,8 @@
   let notes = [];
 
   const loadCached = async () => {
-    const cached = await readCachedNotes();
+    const session = get(sessionStore);
+    const cached = await readCachedNotes(session?.userId);
     await hydrateNotes(cached);
   };
 
@@ -23,13 +24,25 @@
     const decrypted = await Promise.all(
       records
         .sort((a, b) => b.createdAt - a.createdAt)
-        .map(async (note) => ({
-          id: note.id,
-          createdAt: note.createdAt,
-          plaintext: await decryptNote(dek, note)
-        }))
+        .map(async (note) => {
+          try {
+            return {
+              id: note.id,
+              createdAt: note.createdAt,
+              plaintext: await decryptNote(dek, note)
+            };
+          } catch (err) {
+            if (import.meta.env.DEV) {
+              console.warn('Failed to decrypt cached note', {
+                id: note.id,
+                error: err instanceof Error ? err.message : err
+              });
+            }
+            return null;
+          }
+        })
     );
-    notes = decrypted;
+    notes = decrypted.filter((note) => note !== null);
   };
 
   const fetchRemote = async () => {
@@ -37,8 +50,9 @@
     const session = get(sessionStore);
     if (!session) return;
     const remote = await listNotes({ sessionToken: session.sessionToken });
-    await cacheNotes(remote);
-    await hydrateNotes(remote);
+    const annotated = remote.map((note) => ({ ...note, userId: session.userId }));
+    await cacheNotes(annotated);
+    await hydrateNotes(annotated);
   };
 
   const syncPending = async () => {
@@ -50,7 +64,7 @@
       return;
     }
     syncStatusStore.set('syncing');
-    const pending = await readPendingNotes();
+    const pending = await readPendingNotes(session.userId);
     for (const note of pending) {
       await createNote({
         sessionToken: session.sessionToken,
@@ -88,7 +102,7 @@
       noteId
     });
 
-    const record = { id: noteId, createdAt, ...encrypted };
+    const record = { id: noteId, userId: session.userId, createdAt, ...encrypted };
     await addPendingNote(record);
     await cacheNotes([record]);
     noteText = '';
