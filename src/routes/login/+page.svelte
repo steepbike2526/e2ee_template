@@ -1,5 +1,6 @@
 <script>
   import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { onMount } from 'svelte';
   import { deriveMasterKey } from '$lib/crypto/keys';
   import { fetchDeviceDek, fetchMasterWrappedDek, loginWithTotp, registerDevice, requestMagicLink, verifyMagicLink } from '$lib/api';
@@ -148,7 +149,7 @@
         deviceId
       });
       dekStore.set(dek);
-      await goto('/demo');
+      await goto(`${base}/demo`);
     } catch (err) {
       error = err instanceof Error ? err.message : 'Unlock failed.';
     } finally {
