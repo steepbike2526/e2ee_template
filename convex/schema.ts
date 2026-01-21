@@ -54,10 +54,13 @@ export default defineSchema({
   }).index('by_user', ['userId']),
   notes: defineTable({
     userId: v.id('users'),
+    clientNoteId: v.optional(v.string()),
     ciphertext: v.string(),
     nonce: v.string(),
     aad: v.string(),
     version: v.number(),
     createdAt: v.number()
-  }).index('by_user', ['userId'])
+  })
+    .index('by_user', ['userId'])
+    .index('by_user_client', ['userId', 'clientNoteId'])
 });

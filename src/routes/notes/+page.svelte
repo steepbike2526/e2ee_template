@@ -4,6 +4,7 @@
   import { get } from 'svelte/store';
   import { createNote, listNotes } from '$lib/api';
   import { encryptNote, decryptNote } from '$lib/crypto/notes';
+  import { base64ToBytes, fromUtf8Bytes } from '$lib/crypto/encoding';
   import { addPendingNote, cacheNotes, readCachedNotes, readPendingNotes, removePendingNote } from '$lib/storage/notes';
   import { hasConvexUrl } from '$lib/convexClient';
   import { dekStore, onlineStore, sessionStore, syncStatusStore } from '$lib/state';
@@ -19,29 +20,56 @@
     await hydrateNotes(cached);
   };
 
+  const extractNoteKey = (record) => {
+    if (!record?.aad) return record?.id;
+    try {
+      const payload = JSON.parse(fromUtf8Bytes(base64ToBytes(record.aad)));
+      if (typeof payload?.noteId === 'string') {
+        return payload.noteId;
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to parse note metadata', {
+          id: record.id,
+          error: err instanceof Error ? err.message : err
+        });
+      }
+    }
+    return record?.id;
+  };
+
   const hydrateNotes = async (records) => {
     const dek = get(dekStore);
     if (!dek) return;
+    const seen = new Set();
+    const uniqueRecords = records
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .filter((record) => {
+        const key = extractNoteKey(record);
+        if (!key || seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
     const decrypted = await Promise.all(
-      records
-        .sort((a, b) => b.createdAt - a.createdAt)
-        .map(async (note) => {
-          try {
-            return {
+      uniqueRecords.map(async (note) => {
+        try {
+          return {
+            id: note.id,
+            createdAt: note.createdAt,
+            plaintext: await decryptNote(dek, note)
+          };
+        } catch (err) {
+          if (import.meta.env.DEV) {
+            console.warn('Failed to decrypt cached note', {
               id: note.id,
-              createdAt: note.createdAt,
-              plaintext: await decryptNote(dek, note)
-            };
-          } catch (err) {
-            if (import.meta.env.DEV) {
-              console.warn('Failed to decrypt cached note', {
-                id: note.id,
-                error: err instanceof Error ? err.message : err
-              });
-            }
-            return null;
+              error: err instanceof Error ? err.message : err
+            });
           }
-        })
+          return null;
+        }
+      })
     );
     notes = decrypted.filter((note) => note !== null);
   };
@@ -69,6 +97,7 @@
     for (const note of pending) {
       await createNote({
         sessionToken: session.sessionToken,
+        clientNoteId: note.id,
         ciphertext: note.ciphertext,
         nonce: note.nonce,
         aad: note.aad,

@@ -101,6 +101,7 @@ export async function fetchDeviceDek(payload: { sessionToken: string; deviceId: 
 
 export async function createNote(payload: {
   sessionToken: string;
+  clientNoteId: string;
   ciphertext: string;
   nonce: string;
   aad: string;
