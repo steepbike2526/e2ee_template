@@ -11,6 +11,7 @@
   let noteText = '';
   let error = '';
   let notes = [];
+  let wasOnline = true;
 
   const loadCached = async () => {
     const session = get(sessionStore);
@@ -116,6 +117,7 @@
 
   onMount(async () => {
     await loadCached();
+    wasOnline = navigator.onLine;
     if (navigator.onLine) {
       await fetchRemote();
       await syncPending();
@@ -124,6 +126,14 @@
 
   $: if (!$onlineStore) {
     syncStatusStore.set('offline');
+  }
+
+  $: {
+    if ($onlineStore && !wasOnline) {
+      void syncPending();
+      void fetchRemote();
+    }
+    wasOnline = $onlineStore;
   }
 </script>
 
