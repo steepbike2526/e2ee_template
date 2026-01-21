@@ -171,6 +171,8 @@
         userId: pendingSession.userId,
         username: pendingSession.username,
         e2eeSalt: pendingSession.e2eeSalt,
+        passphraseVerifierSalt: pendingSession.passphraseVerifierSalt,
+        passphraseVerifierVersion: pendingSession.passphraseVerifierVersion,
         deviceId
       });
       dekStore.set(dek);
@@ -214,6 +216,8 @@
         userId: pendingSession.userId,
         username: pendingSession.username,
         e2eeSalt: pendingSession.e2eeSalt,
+        passphraseVerifierSalt: pendingSession.passphraseVerifierSalt,
+        passphraseVerifierVersion: pendingSession.passphraseVerifierVersion,
         deviceId: pendingSession.deviceId
       });
       dekStore.set(cachedDek);

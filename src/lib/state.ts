@@ -5,6 +5,8 @@ export type SessionState = {
   userId: string;
   username: string;
   e2eeSalt: string;
+  passphraseVerifierSalt: string;
+  passphraseVerifierVersion: number;
   deviceId: string;
 };
 

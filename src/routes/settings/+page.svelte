@@ -5,11 +5,13 @@
   import {
     deriveDeviceKeyLabel,
     deriveMasterKey,
+    derivePassphraseVerifier,
     encryptWithKey,
     exportRawKey,
     generateRandomSalt,
     importAesKey
   } from '$lib/crypto/keys';
+  import { createPassphraseProof } from '$lib/crypto/proof';
   import { loadDeviceKey, wrapDekWithMasterKey } from '$lib/e2ee';
   import { setSession } from '$lib/session';
   import { storeDeviceRecord } from '$lib/storage/device';
@@ -124,13 +126,20 @@
       const newSalt = generateRandomSalt();
       const newMasterKey = await deriveMasterKey(newPassphrase, newSalt);
       const wrappedDek = await wrapDekWithMasterKey(dek, newMasterKey.keyBytes);
+      const currentVerifier = await derivePassphraseVerifier(currentPassphrase, session.passphraseVerifierSalt);
+      const nextVerifierSalt = generateRandomSalt();
+      const nextVerifier = await derivePassphraseVerifier(newPassphrase, nextVerifierSalt);
 
-      await updatePassphrase({
+      const response = await updatePassphrase({
         sessionToken: session.sessionToken,
         e2eeSalt: newSalt,
         wrappedDek: wrappedDek.ciphertext,
         wrapNonce: wrappedDek.nonce,
-        version: 1
+        version: 1,
+        passphraseProof: await createPassphraseProof(currentVerifier, session.sessionToken),
+        nextPassphraseVerifier: nextVerifier,
+        nextPassphraseVerifierSalt: nextVerifierSalt,
+        nextPassphraseVerifierVersion: 1
       });
 
       if (session.deviceId) {
@@ -148,7 +157,10 @@
 
       await setSession({
         ...session,
-        e2eeSalt: newSalt
+        sessionToken: response.sessionToken ?? session.sessionToken,
+        e2eeSalt: newSalt,
+        passphraseVerifierSalt: nextVerifierSalt,
+        passphraseVerifierVersion: 1
       });
 
       currentPassphrase = '';
@@ -263,8 +275,8 @@
           Keep this device unlocked after refresh
         </label>
         <div class="warning">
-          <strong>Warning:</strong> Enabling this stores your decrypted DEK in local storage. Only enable this on devices
-          you trust to remain secure.
+          <strong>Warning:</strong> This stores your decrypted DEK in browser storage. Any XSS issue or malicious
+          extension could expose your notes. Only enable this on devices you trust.
         </div>
         {#if refreshWarning}
           <div class="helper">{refreshWarning}</div>

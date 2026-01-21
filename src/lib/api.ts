@@ -4,7 +4,7 @@ import { updateSessionToken } from './session';
 
 const refreshSessionToken = (response: { sessionToken?: string }) => {
   if (response?.sessionToken) {
-    updateSessionToken(response.sessionToken);
+    void updateSessionToken(response.sessionToken);
   }
 };
 
@@ -12,6 +12,9 @@ export async function registerUser(payload: {
   username: string;
   email?: string;
   enableTotp?: boolean;
+  passphraseVerifier: string;
+  passphraseVerifierSalt: string;
+  passphraseVerifierVersion: number;
 }) {
   return getConvexClient().mutation(api.auth.registerUser, payload);
 }
@@ -49,6 +52,7 @@ export async function storeMasterWrappedDek(payload: {
   wrappedDek: string;
   wrapNonce: string;
   version: number;
+  passphraseProof: string;
 }) {
   const response = await getConvexClient().mutation(api.auth.storeMasterWrappedDek, payload);
   refreshSessionToken(response);
@@ -67,6 +71,10 @@ export async function updatePassphrase(payload: {
   wrappedDek: string;
   wrapNonce: string;
   version: number;
+  passphraseProof: string;
+  nextPassphraseVerifier: string;
+  nextPassphraseVerifierSalt: string;
+  nextPassphraseVerifierVersion: number;
 }) {
   const response = await getConvexClient().mutation(api.auth.updatePassphrase, payload);
   refreshSessionToken(response);
