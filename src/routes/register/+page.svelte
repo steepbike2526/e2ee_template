@@ -72,6 +72,8 @@
       });
       currentSessionToken = masterResponse.sessionToken ?? currentSessionToken;
 
+      dekStore.set(dek);
+
       await setSession({
         sessionToken: currentSessionToken,
         userId: response.userId,
@@ -81,8 +83,6 @@
         passphraseVerifierVersion: response.passphraseVerifierVersion,
         deviceId: deviceBundle.deviceId
       });
-
-      dekStore.set(dek);
       setAuthMethodPreference(authMethod);
       totpSecret = response.totpSecret ?? '';
       registrationComplete = true;
