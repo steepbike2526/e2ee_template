@@ -3,9 +3,8 @@ import { openNotesDb, type CachedNote, type PendingNote } from './db';
 export async function cacheNotes(notes: CachedNote[]) {
   const db = await openNotesDb();
   const tx = db.transaction('cachedNotes', 'readwrite');
-  for (const note of notes) {
-    await tx.store.put(note);
-  }
+  const writes = notes.map((note) => tx.store.put(note));
+  await Promise.all(writes);
   await tx.done;
 }
 
