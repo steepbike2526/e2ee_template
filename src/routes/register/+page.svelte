@@ -224,9 +224,9 @@
       'Courier New', monospace;
     padding: 0.75rem 1rem;
     border-radius: 0.75rem;
-    background: #0f172a;
-    border: 1px solid #334155;
-    color: #e2e8f0;
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
     word-break: break-all;
     flex: 1;
   }
@@ -235,6 +235,7 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    flex-wrap: wrap;
   }
 
   .copy-button {
@@ -243,10 +244,15 @@
     gap: 0.5rem;
     border-radius: 999px;
     padding: 0.45rem 0.85rem;
-    border: 1px solid #334155;
-    background: #0b1220;
-    color: #e2e8f0;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-primary-strong);
     font-weight: 600;
+    box-shadow: none;
+  }
+
+  .copy-button:hover {
+    background: var(--color-surface-muted);
   }
 
   .copy-button svg {
@@ -258,7 +264,7 @@
   }
 
   .copy-feedback {
-    color: #38bdf8;
+    color: var(--color-primary);
     font-weight: 600;
   }
 
@@ -268,10 +274,16 @@
     margin: 0 0 1rem;
   }
 
+  .auth-toggle legend {
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
   .auth-options {
     display: flex;
     gap: 0.75rem;
-    margin-top: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
   }
 
   .auth-options label {
@@ -280,16 +292,19 @@
     gap: 0.5rem;
     padding: 0.5rem 0.85rem;
     border-radius: 999px;
-    border: 1px solid #334155;
+    border: 1px solid var(--color-border);
     cursor: pointer;
+    color: var(--color-muted);
+    background: var(--color-surface);
   }
 
   .auth-options label.active {
-    background: #1e293b;
-    border-color: #38bdf8;
+    background: var(--color-surface-muted);
+    border-color: rgba(29, 78, 216, 0.4);
+    color: var(--color-primary-strong);
   }
 
   .auth-options input {
-    accent-color: #38bdf8;
+    accent-color: var(--color-primary);
   }
 </style>

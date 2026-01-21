@@ -131,7 +131,22 @@
 
 <div class="app">
   <header class="app__header">
-    <h1>E2EE Notes</h1>
+    <div class="app__brand">
+      <div>
+        <h1>NoAppStore Demo</h1>
+        <p class="app__subtitle">Private, end-to-end encrypted notes for teams and devices.</p>
+      </div>
+      <div class="status">
+        {#if $onlineStore}
+          <span class="status__dot status__dot--online"></span>
+          <span>Online</span>
+        {:else}
+          <span class="status__dot status__dot--offline"></span>
+          <span>Offline</span>
+        {/if}
+        <span class="status__sync">{$syncStatusStore}</span>
+      </div>
+    </div>
     <div class="app__nav">
       <nav>
         <a href={withBase('/')}>Home</a>
@@ -159,49 +174,50 @@
         {/if}
       </div>
     </div>
-    <div class="status">
-      {#if $onlineStore}
-        <span class="status__dot status__dot--online"></span>
-        <span>Online</span>
-      {:else}
-        <span class="status__dot status__dot--offline"></span>
-        <span>Offline</span>
-      {/if}
-      <span class="status__sync">{$syncStatusStore}</span>
-    </div>
   </header>
 
   <main class="app__main">
-    <slot />
+    <div class="app__content">
+      <slot />
+    </div>
   </main>
 </div>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: 'Inter', system-ui, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-  }
-
-  a {
-    color: #38bdf8;
-    text-decoration: none;
+  .app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   .app__header {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 1.5rem;
-    background: #1e293b;
+    gap: 1.5rem;
+    padding: 2rem clamp(1.5rem, 3vw, 3.5rem);
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
+    color: #f8fafc;
+  }
+
+  .app__brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .app__subtitle {
+    margin: 0.35rem 0 0;
+    color: rgba(248, 250, 252, 0.75);
+    font-size: 0.95rem;
   }
 
   .app__nav {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 1.5rem;
     flex-wrap: wrap;
   }
 
@@ -209,48 +225,64 @@
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+    align-items: center;
+  }
+
+  nav a {
+    color: #e2e8f0;
+    font-weight: 600;
+  }
+
+  nav a:hover {
+    color: #ffffff;
   }
 
   .logout {
-    border: 1px solid #334155;
+    border: 1px solid rgba(248, 250, 252, 0.4);
     background: transparent;
-    color: #e2e8f0;
-    padding: 0.3rem 0.75rem;
+    color: #ffffff;
+    padding: 0.4rem 0.9rem;
     border-radius: 999px;
     cursor: pointer;
+    box-shadow: none;
+  }
+
+  .logout:hover {
+    background: rgba(248, 250, 252, 0.15);
   }
 
   .version {
-    margin-left: auto;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     font-size: 0.85rem;
-    color: #cbd5f5;
+    color: rgba(248, 250, 252, 0.8);
   }
 
   .version__badge {
-    border: 1px solid #38bdf8;
-    background: rgba(56, 189, 248, 0.15);
-    color: #e0f2fe;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    background: rgba(15, 23, 42, 0.3);
+    color: #ffffff;
     font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
+    padding: 0.2rem 0.6rem;
     border-radius: 999px;
     cursor: pointer;
   }
 
   .version__badge--info {
-    border-color: #22c55e;
-    background: rgba(34, 197, 94, 0.15);
-    color: #dcfce7;
+    border-color: rgba(34, 197, 94, 0.6);
+    background: rgba(34, 197, 94, 0.2);
     cursor: default;
   }
 
   .status {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
     font-size: 0.9rem;
+    background: rgba(15, 23, 42, 0.35);
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
   }
 
   .status__dot {
@@ -269,12 +301,20 @@
   }
 
   .status__sync {
-    padding-left: 0.5rem;
-    border-left: 1px solid #475569;
+    padding-left: 0.6rem;
+    border-left: 1px solid rgba(248, 250, 252, 0.4);
+    text-transform: capitalize;
   }
 
   .app__main {
-    padding: 1.5rem;
+    flex: 1;
+    padding: 2.5rem clamp(1.5rem, 3vw, 3.5rem) 3.5rem;
   }
 
+  .app__content {
+    max-width: 960px;
+    margin: 0 auto;
+    display: grid;
+    gap: 1.5rem;
+  }
 </style>

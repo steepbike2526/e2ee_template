@@ -350,16 +350,29 @@
   }
 
   .panel {
-    padding: 1.25rem;
-    border-radius: 0.9rem;
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid #334155;
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
   }
 
   .options {
     display: flex;
     gap: 1.5rem;
     margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .options input {
+    accent-color: var(--color-primary);
   }
 
   .toggle {
@@ -367,15 +380,20 @@
     gap: 0.6rem;
     align-items: center;
     margin-top: 0.75rem;
+    font-weight: 600;
+  }
+
+  .toggle input {
+    accent-color: var(--color-primary);
   }
 
   .warning {
     margin-top: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    background: rgba(248, 113, 113, 0.1);
-    border: 1px solid rgba(248, 113, 113, 0.4);
-    font-size: 0.85rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.9rem;
+    background: rgba(220, 38, 38, 0.08);
+    border: 1px solid rgba(220, 38, 38, 0.35);
+    font-size: 0.9rem;
+    color: #991b1b;
   }
-
 </style>
