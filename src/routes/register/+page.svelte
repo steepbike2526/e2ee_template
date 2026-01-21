@@ -13,36 +13,36 @@
   let email = '';
   let passphrase = '';
   let confirmPassphrase = '';
-  let authMethod = 'magic';
-  let enableTotp = false;
+  let selectedAuthMethod = 'magic';
+  let isTotpEnabled = false;
   let totpSecret = '';
-  let error = '';
-  let loading = false;
-  let registrationComplete = false;
-  let showSetupStep = false;
+  let errorMessage = '';
+  let isSubmitting = false;
+  let isRegistrationComplete = false;
+  let showTotpSetupStep = false;
   let copiedSecret = '';
 
-  $: enableTotp = authMethod === 'totp';
+  $: isTotpEnabled = selectedAuthMethod === 'totp';
 
-  const validate = () => {
+  const validateRegistration = () => {
     if (!username.trim()) return 'Username is required.';
-    if (!enableTotp && !email.trim()) return 'Email is required unless you enable TOTP.';
+    if (!isTotpEnabled && !email.trim()) return 'Email is required unless you enable TOTP.';
     if (!passphrase || passphrase.length < 8) return 'Passphrase must be at least 8 characters.';
     if (passphrase !== confirmPassphrase) return 'Passphrases do not match.';
     return '';
   };
 
   const handleSubmit = async () => {
-    error = validate();
-    if (error) return;
-    loading = true;
+    errorMessage = validateRegistration();
+    if (errorMessage) return;
+    isSubmitting = true;
     try {
       const passphraseVerifierSalt = generateRandomSalt();
       const passphraseVerifier = await derivePassphraseVerifier(passphrase, passphraseVerifierSalt);
       const response = await registerUser({
         username,
         email: email.trim() ? email.trim() : undefined,
-        enableTotp,
+        enableTotp: isTotpEnabled,
         passphraseVerifier,
         passphraseVerifierSalt,
         passphraseVerifierVersion: 1
@@ -83,17 +83,17 @@
         passphraseVerifierVersion: response.passphraseVerifierVersion,
         deviceId: deviceBundle.deviceId
       });
-      setAuthMethodPreference(authMethod);
+      setAuthMethodPreference(selectedAuthMethod);
       totpSecret = response.totpSecret ?? '';
-      registrationComplete = true;
-      showSetupStep = enableTotp;
-      if (!showSetupStep) {
+      isRegistrationComplete = true;
+      showTotpSetupStep = isTotpEnabled;
+      if (!showTotpSetupStep) {
         await goto(`${base}/notes`);
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Registration failed.';
+      errorMessage = err instanceof Error ? err.message : 'Registration failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 
@@ -125,17 +125,17 @@
     device.
   </p>
 
-  {#if registrationComplete && showSetupStep}
-    <div class="totp-card">
+  {#if isRegistrationComplete && showTotpSetupStep}
+    <div class="totp-setup-card">
       {#if totpSecret}
         <h3>Save your TOTP secret</h3>
         <p class="helper">
           Add this secret to your authenticator app. This is shown only once. Store it somewhere safe before continuing.
         </p>
-        <div class="secret-row">
-          <div class="totp-secret">{totpSecret}</div>
+        <div class="totp-secret-row">
+          <div class="totp-secret-value">{totpSecret}</div>
           <button
-            class="copy-button"
+            class="totp-copy-button"
             type="button"
             on:click={() => handleCopy(totpSecret, 'TOTP secret')}
             aria-label="Copy TOTP secret"
@@ -151,7 +151,7 @@
             Copy
           </button>
         </div>
-      {:else if enableTotp}
+      {:else if isTotpEnabled}
         <p class="helper error">
           We were unable to retrieve a TOTP secret. Please try registering again or contact support.
         </p>
@@ -173,18 +173,18 @@
         Choose how you want to sign in. Magic link uses email, while TOTP uses an authenticator app.
       </p>
       <div class="auth-options">
-        <label class:active={authMethod === 'magic'}>
-          <input type="radio" bind:group={authMethod} value="magic" />
+        <label class:active={selectedAuthMethod === 'magic'}>
+          <input type="radio" bind:group={selectedAuthMethod} value="magic" />
           Magic link
         </label>
-        <label class:active={authMethod === 'totp'}>
-          <input type="radio" bind:group={authMethod} value="totp" />
+        <label class:active={selectedAuthMethod === 'totp'}>
+          <input type="radio" bind:group={selectedAuthMethod} value="totp" />
           TOTP app
         </label>
       </div>
     </fieldset>
     <label>
-      Email {enableTotp ? '(optional for TOTP)' : '(required for magic link)'}
+      Email {isTotpEnabled ? '(optional for TOTP)' : '(required for magic link)'}
       <input bind:value={email} type="email" autocomplete="email" />
     </label>
     <label>
@@ -196,30 +196,30 @@
       <input bind:value={confirmPassphrase} type="password" autocomplete="new-password" />
     </label>
     <p class="helper">Choose a passphrase you can remember. You will need it to unlock notes on this device.</p>
-    {#if enableTotp}
+    {#if isTotpEnabled}
       <p class="helper">
         If you skip email, you will only be able to log in with TOTP. Keep your authenticator app in a safe place.
       </p>
     {/if}
 
-    {#if error}
-      <div class="error">{error}</div>
+    {#if errorMessage}
+      <div class="error">{errorMessage}</div>
     {/if}
 
-    <button on:click|preventDefault={handleSubmit} disabled={loading}>
-      {loading ? 'Creating account...' : 'Register'}
+    <button on:click|preventDefault={handleSubmit} disabled={isSubmitting}>
+      {isSubmitting ? 'Creating account...' : 'Register'}
     </button>
   </div>
   {/if}
 </section>
 
 <style>
-  .totp-card {
+  .totp-setup-card {
     display: grid;
     gap: 1rem;
   }
 
-  .totp-secret {
+  .totp-secret-value {
     font-family: 'SFMono-Regular', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
       'Courier New', monospace;
     padding: 0.75rem 1rem;
@@ -231,14 +231,14 @@
     flex: 1;
   }
 
-  .secret-row {
+  .totp-secret-row {
     display: flex;
     gap: 0.75rem;
     align-items: center;
     flex-wrap: wrap;
   }
 
-  .copy-button {
+  .totp-copy-button {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -251,11 +251,11 @@
     box-shadow: none;
   }
 
-  .copy-button:hover {
+  .totp-copy-button:hover {
     background: var(--color-surface-muted);
   }
 
-  .copy-button svg {
+  .totp-copy-button svg {
     width: 1rem;
     height: 1rem;
     fill: none;

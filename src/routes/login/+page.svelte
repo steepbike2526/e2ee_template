@@ -28,17 +28,17 @@
 
   const savedEmailKey = 'e2ee:lastEmail';
 
-  let method = getAuthMethodPreference();
+  let authMethod = getAuthMethodPreference();
   let username = '';
   let email = '';
   let token = '';
   let totpCode = '';
   let passphrase = '';
   let magicLinkExpiresAt = 0;
-  let step = 'auth';
-  let pendingSession = null;
-  let error = '';
-  let loading = false;
+  let loginStep = 'auth';
+  let pendingSessionState = null;
+  let errorMessage = '';
+  let isSubmitting = false;
 
   onMount(() => {
     const savedEmail = localStorage.getItem(savedEmailKey);
@@ -48,8 +48,8 @@
     const storedSession = get(sessionStore);
     const dek = get(dekStore);
     if (storedSession && !dek) {
-      pendingSession = storedSession;
-      step = 'decrypt';
+      pendingSessionState = storedSession;
+      loginStep = 'decrypt';
     } else if (storedSession && dek) {
       goto(`${base}/notes`);
     }
@@ -63,84 +63,84 @@
   };
 
   const startDecrypt = (response) => {
-    pendingSession = response;
-    step = 'decrypt';
-    error = '';
-    void updateUserPreferences({ sessionToken: response.sessionToken, authMethod: method }).catch((err) => {
+    pendingSessionState = response;
+    loginStep = 'decrypt';
+    errorMessage = '';
+    void updateUserPreferences({ sessionToken: response.sessionToken, authMethod }).catch((err) => {
       console.error('Failed to update user preferences.', err);
     });
   };
 
-  const handleRequestMagic = async () => {
-    error = '';
+  const handleMagicLinkRequest = async () => {
+    errorMessage = '';
     if (!email.trim()) {
-      error = 'Email is required.';
+      errorMessage = 'Email is required.';
       return;
     }
-    loading = true;
+    isSubmitting = true;
     try {
       const response = await requestMagicLink({ email });
       rememberEmail(email);
       magicLinkExpiresAt = response.expiresAt;
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Magic link request failed.';
+      errorMessage = err instanceof Error ? err.message : 'Magic link request failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 
-  const handleVerifyMagic = async () => {
-    error = '';
+  const handleMagicLinkVerify = async () => {
+    errorMessage = '';
     if (!email.trim() || !token.trim()) {
-      error = 'Email and token are required.';
+      errorMessage = 'Email and token are required.';
       return;
     }
-    loading = true;
+    isSubmitting = true;
     try {
       const response = await verifyMagicLink({ email, token });
       rememberEmail(email);
       startDecrypt(response);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Magic link verification failed.';
+      errorMessage = err instanceof Error ? err.message : 'Magic link verification failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 
-  const handleTotpLogin = async () => {
-    error = '';
+  const handleTotpSignIn = async () => {
+    errorMessage = '';
     if (!username.trim() || !totpCode.trim()) {
-      error = 'Username and TOTP code are required.';
+      errorMessage = 'Username and TOTP code are required.';
       return;
     }
-    loading = true;
+    isSubmitting = true;
     try {
       const response = await loginWithTotp({ username, code: totpCode });
       startDecrypt(response);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'TOTP login failed.';
+      errorMessage = err instanceof Error ? err.message : 'TOTP login failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 
-  const handleUnlock = async () => {
-    error = '';
-    if (!pendingSession) return;
+  const handlePassphraseUnlock = async () => {
+    errorMessage = '';
+    if (!pendingSessionState) return;
     if (!passphrase.trim()) {
-      error = 'Passphrase is required to decrypt notes.';
+      errorMessage = 'Passphrase is required to decrypt notes.';
       return;
     }
-    loading = true;
+    isSubmitting = true;
     try {
-      const deviceSettings = getDeviceSettings(pendingSession.userId);
+      const deviceSettings = getDeviceSettings(pendingSessionState.userId);
       if (deviceSettings.biometricsEnabled && deviceSettings.biometricCredentialId) {
         await promptBiometric(deviceSettings.biometricCredentialId);
       }
       const deviceRecord = await readAnyDeviceRecord();
       let deviceId = deviceRecord?.deviceId ?? '';
-      let currentSessionToken = pendingSession.sessionToken;
-      const masterKey = await deriveMasterKey(passphrase, pendingSession.e2eeSalt);
+      let currentSessionToken = pendingSessionState.sessionToken;
+      const masterKey = await deriveMasterKey(passphrase, pendingSessionState.e2eeSalt);
       let dek;
       if (deviceId) {
         try {
@@ -179,64 +179,64 @@
 
       await setSession({
         sessionToken: currentSessionToken,
-        userId: pendingSession.userId,
-        username: pendingSession.username,
-        e2eeSalt: pendingSession.e2eeSalt,
-        passphraseVerifierSalt: pendingSession.passphraseVerifierSalt,
-        passphraseVerifierVersion: pendingSession.passphraseVerifierVersion,
+        userId: pendingSessionState.userId,
+        username: pendingSessionState.username,
+        e2eeSalt: pendingSessionState.e2eeSalt,
+        passphraseVerifierSalt: pendingSessionState.passphraseVerifierSalt,
+        passphraseVerifierVersion: pendingSessionState.passphraseVerifierVersion,
         deviceId
       });
       dekStore.set(dek);
       if (deviceSettings.allowUnsafeDekCache) {
-        await storeUnsafeDek(pendingSession.userId, deviceId, dek);
+        await storeUnsafeDek(pendingSessionState.userId, deviceId, dek);
       }
       await goto(`${base}/notes`);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Unlock failed.';
+      errorMessage = err instanceof Error ? err.message : 'Unlock failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 
   const handlePasskeyUnlock = async () => {
-    error = '';
-    if (!pendingSession) return;
-    const deviceSettings = getDeviceSettings(pendingSession.userId);
+    errorMessage = '';
+    if (!pendingSessionState) return;
+    const deviceSettings = getDeviceSettings(pendingSessionState.userId);
     if (!deviceSettings.biometricsEnabled || !deviceSettings.biometricCredentialId) {
-      error = 'Passkey verification is not enabled for this device.';
+      errorMessage = 'Passkey verification is not enabled for this device.';
       return;
     }
     if (!deviceSettings.allowUnsafeDekCache) {
-      error = 'Enable “Keep this device unlocked after refresh” to use passkey-only unlock.';
+      errorMessage = 'Enable “Keep this device unlocked after refresh” to use passkey-only unlock.';
       return;
     }
-    if (!pendingSession.deviceId) {
-      error = 'Unlock with your passphrase once to finish setting up this device.';
+    if (!pendingSessionState.deviceId) {
+      errorMessage = 'Unlock with your passphrase once to finish setting up this device.';
       return;
     }
-    loading = true;
+    isSubmitting = true;
     try {
       await promptBiometric(deviceSettings.biometricCredentialId);
-      const cachedDek = await loadUnsafeDek(pendingSession.userId, pendingSession.deviceId);
+      const cachedDek = await loadUnsafeDek(pendingSessionState.userId, pendingSessionState.deviceId);
       if (!cachedDek) {
-        error = 'No cached device key found. Unlock with your passphrase to refresh it.';
+        errorMessage = 'No cached device key found. Unlock with your passphrase to refresh it.';
         return;
       }
       await setSession({
-        sessionToken: pendingSession.sessionToken,
-        userId: pendingSession.userId,
-        username: pendingSession.username,
-        e2eeSalt: pendingSession.e2eeSalt,
-        passphraseVerifierSalt: pendingSession.passphraseVerifierSalt,
-        passphraseVerifierVersion: pendingSession.passphraseVerifierVersion,
-        deviceId: pendingSession.deviceId
+        sessionToken: pendingSessionState.sessionToken,
+        userId: pendingSessionState.userId,
+        username: pendingSessionState.username,
+        e2eeSalt: pendingSessionState.e2eeSalt,
+        passphraseVerifierSalt: pendingSessionState.passphraseVerifierSalt,
+        passphraseVerifierVersion: pendingSessionState.passphraseVerifierVersion,
+        deviceId: pendingSessionState.deviceId
       });
       dekStore.set(cachedDek);
       await goto(`${base}/notes`);
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Passkey unlock failed.';
+      errorMessage = err instanceof Error ? err.message : 'Passkey unlock failed.';
     } finally {
-      loading = false;
+      isSubmitting = false;
     }
   };
 </script>
@@ -245,12 +245,12 @@
   <h2>Login</h2>
   <p class="helper">Choose magic link or TOTP to authenticate, then unlock your notes with your local passphrase.</p>
 
-  {#if step === 'auth'}
-    <div class="tabs" role="tablist">
+  {#if loginStep === 'auth'}
+    <div class="auth-method-tabs" role="tablist">
       <button
-        class:active={method === 'magic'}
+        class:active={authMethod === 'magic'}
         on:click={() => {
-          method = 'magic';
+          authMethod = 'magic';
           setAuthMethodPreference('magic');
         }}
         type="button"
@@ -258,9 +258,9 @@
         Magic link
       </button>
       <button
-        class:active={method === 'totp'}
+        class:active={authMethod === 'totp'}
         on:click={() => {
-          method = 'totp';
+          authMethod = 'totp';
           setAuthMethodPreference('totp');
         }}
         type="button"
@@ -269,15 +269,15 @@
       </button>
     </div>
 
-    {#if method === 'magic'}
+    {#if authMethod === 'magic'}
       <div class="form">
         <label>
           Email
           <input bind:value={email} type="email" autocomplete="email" />
         </label>
 
-        <button on:click|preventDefault={handleRequestMagic} disabled={loading}>
-          {loading ? 'Sending link...' : 'Send magic link'}
+        <button on:click|preventDefault={handleMagicLinkRequest} disabled={isSubmitting}>
+          {isSubmitting ? 'Sending link...' : 'Send magic link'}
         </button>
 
         {#if magicLinkExpiresAt > 0}
@@ -288,8 +288,8 @@
             Enter token
             <input bind:value={token} autocomplete="one-time-code" />
           </label>
-          <button on:click|preventDefault={handleVerifyMagic} disabled={loading}>
-            {loading ? 'Verifying...' : 'Verify token'}
+          <button on:click|preventDefault={handleMagicLinkVerify} disabled={isSubmitting}>
+            {isSubmitting ? 'Verifying...' : 'Verify token'}
           </button>
         {/if}
       </div>
@@ -304,34 +304,34 @@
           <input bind:value={totpCode} inputmode="numeric" autocomplete="one-time-code" />
         </label>
 
-        <button on:click|preventDefault={handleTotpLogin} disabled={loading}>
-          {loading ? 'Verifying...' : 'Login with TOTP'}
+        <button on:click|preventDefault={handleTotpSignIn} disabled={isSubmitting}>
+          {isSubmitting ? 'Verifying...' : 'Login with TOTP'}
         </button>
       </div>
     {/if}
   {:else}
     <div class="form">
       <p class="helper">Use your passkey or your passphrase to unlock this device.</p>
-      <button type="button" class="secondary" on:click={handlePasskeyUnlock} disabled={loading}>
-        {loading ? 'Unlocking...' : 'Unlock with passkey'}
+      <button type="button" class="secondary" on:click={handlePasskeyUnlock} disabled={isSubmitting}>
+        {isSubmitting ? 'Unlocking...' : 'Unlock with passkey'}
       </button>
       <label>
         Decryption passphrase
         <input bind:value={passphrase} type="password" autocomplete="current-password" />
       </label>
-      <button on:click|preventDefault={handleUnlock} disabled={loading}>
-        {loading ? 'Unlocking...' : 'Unlock notes'}
+      <button on:click|preventDefault={handlePassphraseUnlock} disabled={isSubmitting}>
+        {isSubmitting ? 'Unlocking...' : 'Unlock notes'}
       </button>
     </div>
   {/if}
 
-  {#if error}
-    <div class="error">{error}</div>
+  {#if errorMessage}
+    <div class="error">{errorMessage}</div>
   {/if}
 </section>
 
 <style>
-  .tabs {
+  .auth-method-tabs {
     display: inline-flex;
     gap: 0.5rem;
     margin-bottom: 1.25rem;
@@ -341,7 +341,7 @@
     border: 1px solid var(--color-border);
   }
 
-  .tabs button {
+  .auth-method-tabs button {
     border: none;
     background: transparent;
     color: var(--color-muted);
@@ -350,7 +350,7 @@
     box-shadow: none;
   }
 
-  .tabs button.active {
+  .auth-method-tabs button.active {
     background: var(--color-surface);
     color: var(--color-primary-strong);
     box-shadow: var(--shadow-soft);
