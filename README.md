@@ -109,14 +109,14 @@ Use an **environment variable** if you need different values per environment (fo
 3. Set **Name** to `VITE_CONVEX_URL`.
 4. Set **Value** to your Convex deployment URL, then click **Add variable**.
 
-### Optional: Deploy Convex from GitHub Actions
+### Deploy Convex from GitHub Actions
 
-If you want the GitHub Pages workflow to deploy Convex automatically, set:
+To deploy Convex from the GitHub Pages workflow, set:
 
-- **Repository variable** `CONVEX_DEPLOYMENT` (example: `your-team:prod`)
 - **Repository secret** `CONVEX_DEPLOY_KEY` (from the Convex dashboard; required for non-interactive CI auth)
+- **Repository or environment variable** `VITE_CONVEX_URL` with your Convex deployment URL
 
-When both are present, the workflow runs `npx convex deploy` before the frontend build.
+The workflow runs `npx convex deploy --url "$VITE_CONVEX_URL"` before the frontend build.
 
 ### Custom domain
 
