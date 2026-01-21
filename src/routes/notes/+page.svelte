@@ -81,7 +81,13 @@
     const remote = await listNotes({ sessionToken: session.sessionToken });
     const annotated = remote.notes.map((note) => ({ ...note, userId: session.userId }));
     await cacheNotes(annotated);
-    await hydrateNotes(annotated);
+    const cached = await readCachedNotes(session.userId);
+    await hydrateNotes(cached);
+  };
+
+  const syncAndRefresh = async () => {
+    await syncPending();
+    await fetchRemote();
   };
 
   const syncPending = async () => {
@@ -148,8 +154,7 @@
     await loadCached();
     wasOnline = navigator.onLine;
     if (navigator.onLine) {
-      await fetchRemote();
-      await syncPending();
+      await syncAndRefresh();
     }
   });
 
@@ -159,8 +164,7 @@
 
   $: {
     if ($onlineStore && !wasOnline) {
-      void syncPending();
-      void fetchRemote();
+      void syncAndRefresh();
     }
     wasOnline = $onlineStore;
   }
