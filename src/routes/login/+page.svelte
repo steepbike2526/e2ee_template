@@ -338,10 +338,4 @@
     background: #1e293b;
   }
 
-  .secondary {
-    background: transparent;
-    color: #e2e8f0;
-    border: 1px solid #334155;
-  }
-
 </style>

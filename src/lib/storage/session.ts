@@ -1,12 +1,11 @@
 import { openNotesDb } from './db';
-import { base64ToBytes, bytesToBase64, toUtf8Bytes } from '../crypto/encoding';
+import { toUtf8Bytes } from '../crypto/encoding';
+import { decryptWithKey, encryptWithKey } from '../crypto/keys';
 import type { SessionState } from '../state';
 
 const SESSION_KEY_ID = 'session-key';
 const SESSION_RECORD_ID = 'session';
 const SESSION_RECORD_VERSION = 1;
-
-const toByteArray = (bytes: Uint8Array) => new Uint8Array(bytes);
 
 async function getSessionKey(): Promise<CryptoKey> {
   const db = await openNotesDb();
@@ -28,25 +27,12 @@ function toPayload(session: SessionState) {
 
 async function encryptPayload(payload: string) {
   const key = await getSessionKey();
-  const nonce = crypto.getRandomValues(new Uint8Array(12));
-  const ciphertext = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv: nonce },
-    key,
-    toByteArray(toUtf8Bytes(payload))
-  );
-  return {
-    nonce: bytesToBase64(nonce),
-    ciphertext: bytesToBase64(new Uint8Array(ciphertext))
-  };
+  return encryptWithKey(key, toUtf8Bytes(payload));
 }
 
 async function decryptPayload(payload: { ciphertext: string; nonce: string }) {
   const key = await getSessionKey();
-  const plaintext = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: toByteArray(base64ToBytes(payload.nonce)) },
-    key,
-    toByteArray(base64ToBytes(payload.ciphertext))
-  );
+  const plaintext = await decryptWithKey(key, payload);
   return new TextDecoder().decode(plaintext);
 }
 

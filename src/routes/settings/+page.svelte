@@ -331,10 +331,4 @@
     font-size: 0.85rem;
   }
 
-  .secondary {
-    background: transparent;
-    color: #e2e8f0;
-    border: 1px solid #334155;
-  }
-
 </style>

@@ -5,14 +5,7 @@ type ByteArray = Uint8Array<ArrayBuffer>;
 
 const toByteArray = (bytes: Uint8Array): ByteArray => new Uint8Array(bytes);
 
-const ARGON2_PARAMS = {
-  time: 3,
-  mem: 64 * 1024,
-  parallelism: 1,
-  hashLen: 32
-};
-
-const PASS_VERIFIER_PARAMS = {
+const ARGON2_DEFAULT_PARAMS = {
   time: 3,
   mem: 64 * 1024,
   parallelism: 1,
@@ -22,7 +15,7 @@ const PASS_VERIFIER_PARAMS = {
 export type DerivedMasterKey = {
   keyBytes: Uint8Array;
   salt: string;
-  params: typeof ARGON2_PARAMS;
+  params: typeof ARGON2_DEFAULT_PARAMS;
 };
 
 export async function deriveMasterKey(password: string, saltBase64: string): Promise<DerivedMasterKey> {
@@ -31,13 +24,13 @@ export async function deriveMasterKey(password: string, saltBase64: string): Pro
     pass: password,
     salt,
     type: argon2.ArgonType.Argon2id,
-    ...ARGON2_PARAMS
+    ...ARGON2_DEFAULT_PARAMS
   });
 
   return {
     keyBytes: new Uint8Array(result.hash),
     salt: saltBase64,
-    params: ARGON2_PARAMS
+    params: ARGON2_DEFAULT_PARAMS
   };
 }
 
@@ -47,7 +40,7 @@ export async function derivePassphraseVerifier(password: string, saltBase64: str
     pass: password,
     salt,
     type: argon2.ArgonType.Argon2id,
-    ...PASS_VERIFIER_PARAMS
+    ...ARGON2_DEFAULT_PARAMS
   });
   return bytesToBase64(new Uint8Array(result.hash));
 }

@@ -43,18 +43,7 @@ type Argon2Module = {
     adLen: number,
     version: number
   ) => number;
-  _argon2_verify_ext: (
-    encoded: number,
-    pwd: number,
-    pwdLen: number,
-    secret: number,
-    secretLen: number,
-    ad: number,
-    adLen: number,
-    argon2Type: ArgonTypeValue
-  ) => number;
   _free: (ptr: number) => void;
-  unloadRuntime: () => void;
   postRun?: () => void;
 };
 
@@ -65,14 +54,6 @@ type Argon2HashParams = {
   mem?: number;
   hashLen?: number;
   parallelism?: number;
-  type?: ArgonTypeValue;
-  secret?: Uint8Array;
-  ad?: Uint8Array;
-};
-
-type Argon2VerifyParams = {
-  pass: string;
-  encoded: string | Uint8Array;
   type?: ArgonTypeValue;
   secret?: Uint8Array;
   ad?: Uint8Array;
@@ -285,78 +266,7 @@ export async function hash(params: Argon2HashParams): Promise<Argon2HashResult> 
   return result;
 }
 
-export async function verify(params: Argon2VerifyParams) {
-  const Module = await loadModule();
-  const pwdEncoded = encodeUtf8(params.pass);
-  const pwd = allocateArrayStr(Module, pwdEncoded);
-  const pwdlen = pwdEncoded.length;
-  const secret = params.secret ? allocateArray(Module, params.secret) : 0;
-  const secretlen = params.secret ? params.secret.byteLength : 0;
-  const ad = params.ad ? allocateArray(Module, params.ad) : 0;
-  const adlen = params.ad ? params.ad.byteLength : 0;
-  const encEncoded = encodeUtf8(params.encoded);
-  const enc = allocateArrayStr(Module, encEncoded);
-  let argon2Type = params.type;
-  if (argon2Type === undefined && typeof params.encoded === 'string') {
-    let typeStr = params.encoded.split('$')[1];
-    if (typeStr) {
-      typeStr = typeStr.replace('a', 'A');
-      argon2Type = ArgonType[typeStr as keyof typeof ArgonType] || ArgonType.Argon2d;
-    }
-  }
-
-  let err: unknown;
-  let res = 0;
-  try {
-    res = Module._argon2_verify_ext(
-      enc,
-      pwd,
-      pwdlen,
-      secret,
-      secretlen,
-      ad,
-      adlen,
-      argon2Type || ArgonType.Argon2d
-    );
-  } catch (error) {
-    err = error;
-  }
-
-  let result: Argon2Error | undefined;
-  if (res || err) {
-    try {
-      if (!err) {
-        err = Module.UTF8ToString(Module._argon2_error_message(res));
-      }
-    } catch {
-      // ignore error fallback
-    }
-    result = { message: String(err), code: res };
-  }
-
-  try {
-    Module._free(pwd);
-    Module._free(enc);
-  } catch {
-    // ignore cleanup errors
-  }
-
-  if (result) {
-    throw result;
-  }
-}
-
-export function unloadRuntime() {
-  if (moduleCache) {
-    moduleCache.unloadRuntime();
-    modulePromise = null;
-    moduleCache = null;
-  }
-}
-
 export default {
   ArgonType,
-  hash,
-  verify,
-  unloadRuntime
+  hash
 };
