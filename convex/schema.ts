@@ -46,6 +46,12 @@ export default defineSchema({
   })
     .index('by_user', ['userId'])
     .index('by_user_device', ['userId', 'deviceId']),
+  userPreferences: defineTable({
+    userId: v.id('users'),
+    authMethod: v.union(v.literal('magic'), v.literal('totp')),
+    createdAt: v.number(),
+    updatedAt: v.number()
+  }).index('by_user', ['userId']),
   notes: defineTable({
     userId: v.id('users'),
     ciphertext: v.string(),

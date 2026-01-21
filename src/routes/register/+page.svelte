@@ -7,6 +7,7 @@
   import { registerDevice, registerUser, storeMasterWrappedDek } from '$lib/api';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
+  import { setAuthMethodPreference } from '$lib/deviceSettings';
 
   let username = '';
   let email = '';
@@ -82,6 +83,7 @@
       });
 
       dekStore.set(dek);
+      setAuthMethodPreference(authMethod);
       totpSecret = response.totpSecret ?? '';
       registrationComplete = true;
       showSetupStep = enableTotp;

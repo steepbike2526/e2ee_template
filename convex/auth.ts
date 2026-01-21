@@ -86,6 +86,7 @@ export const registerUser = mutation({
     const e2eeSalt = btoa(String.fromCharCode(...e2eeSaltBytes));
     const totpSecret = args.enableTotp ? generateTotpSecret() : undefined;
     const totpPayload = totpSecret ? await encryptSecret(totpSecret) : null;
+    const createdAt = Date.now();
     const userId = await ctx.db.insert('users', {
       username: args.username,
       email,
@@ -95,7 +96,14 @@ export const registerUser = mutation({
       passphraseVerifierVersion: args.passphraseVerifierVersion,
       totpSecretCiphertext: totpPayload?.ciphertext,
       totpSecretNonce: totpPayload?.nonce,
-      createdAt: Date.now()
+      createdAt
+    });
+    const authMethod = args.enableTotp ? 'totp' : 'magic';
+    await ctx.db.insert('userPreferences', {
+      userId,
+      authMethod,
+      createdAt,
+      updatedAt: createdAt
     });
 
     const session = await createSession(ctx, userId);

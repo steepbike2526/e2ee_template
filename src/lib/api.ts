@@ -81,6 +81,18 @@ export async function updatePassphrase(payload: {
   return response;
 }
 
+export async function getUserPreferences(payload: { sessionToken: string }) {
+  const response = await getConvexClient().mutation(api.userPreferences.getUserPreferences, payload);
+  refreshSessionToken(response);
+  return response;
+}
+
+export async function updateUserPreferences(payload: { sessionToken: string; authMethod: 'magic' | 'totp' }) {
+  const response = await getConvexClient().mutation(api.userPreferences.updateUserPreferences, payload);
+  refreshSessionToken(response);
+  return response;
+}
+
 export async function fetchDeviceDek(payload: { sessionToken: string; deviceId: string }) {
   const response = await getConvexClient().mutation(api.devices.getWrappedDek, payload);
   refreshSessionToken(response);

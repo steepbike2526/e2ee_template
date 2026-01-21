@@ -4,7 +4,15 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { deriveMasterKey } from '$lib/crypto/keys';
-  import { fetchDeviceDek, fetchMasterWrappedDek, loginWithTotp, registerDevice, requestMagicLink, verifyMagicLink } from '$lib/api';
+  import {
+    fetchDeviceDek,
+    fetchMasterWrappedDek,
+    loginWithTotp,
+    registerDevice,
+    requestMagicLink,
+    updateUserPreferences,
+    verifyMagicLink
+  } from '$lib/api';
   import { createDeviceKeyBundle, loadDeviceKey, unwrapDekForDevice, unwrapDekWithMasterKey, wrapDekForDevice } from '$lib/e2ee';
   import { setSession } from '$lib/session';
   import { dekStore, sessionStore } from '$lib/state';
@@ -58,6 +66,9 @@
     pendingSession = response;
     step = 'decrypt';
     error = '';
+    void updateUserPreferences({ sessionToken: response.sessionToken, authMethod: method }).catch((err) => {
+      console.error('Failed to update user preferences.', err);
+    });
   };
 
   const handleRequestMagic = async () => {
