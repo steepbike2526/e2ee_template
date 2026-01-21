@@ -246,7 +246,7 @@
   <p class="helper">Choose magic link or TOTP to authenticate, then unlock your notes with your local passphrase.</p>
 
   {#if step === 'auth'}
-    <div class="tabs">
+    <div class="tabs" role="tablist">
       <button
         class:active={method === 'magic'}
         on:click={() => {
@@ -332,21 +332,27 @@
 
 <style>
   .tabs {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    display: inline-flex;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0.35rem;
+    border-radius: 999px;
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
   }
 
   .tabs button {
-    border: 1px solid #334155;
+    border: none;
     background: transparent;
-    color: #e2e8f0;
-    padding: 0.5rem 0.9rem;
+    color: var(--color-muted);
+    padding: 0.45rem 1rem;
     border-radius: 999px;
+    box-shadow: none;
   }
 
   .tabs button.active {
-    background: #1e293b;
+    background: var(--color-surface);
+    color: var(--color-primary-strong);
+    box-shadow: var(--shadow-soft);
   }
-
 </style>

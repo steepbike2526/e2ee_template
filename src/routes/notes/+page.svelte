@@ -142,7 +142,7 @@
   <div class="form">
     <label>
       New note
-      <textarea bind:value={noteText} rows="4"></textarea>
+      <textarea bind:value={noteText} rows="4" placeholder="Write a secure note..."></textarea>
     </label>
     {#if error}
       <div class="error">{error}</div>
@@ -173,15 +173,17 @@
   }
 
   .note {
-    padding: 1rem;
-    border-radius: 0.75rem;
-    background: #0f172a;
-    border: 1px solid #334155;
+    padding: 1.25rem;
+    border-radius: 1rem;
+    background: var(--color-surface-muted);
+    border: 1px solid var(--color-border);
   }
 
   .note__meta {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: var(--color-muted);
     margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 </style>
