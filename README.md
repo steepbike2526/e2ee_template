@@ -1,4 +1,4 @@
-# E2EE Notes Template (SvelteKit + Convex + Vercel)
+# E2EE Notes Template (SvelteKit + Convex)
 
 This template is a human-readable starting point for a SvelteKit PWA that stores **end-to-end encrypted notes** in a Convex backend. The server only sees ciphertext and metadata — the data encryption key (DEK) and plaintext never leave the client.
 
@@ -69,18 +69,6 @@ Running `version:major` or `version:minor` resets the patch number to `0` as par
 script logic. To auto-bump the patch version without Husky, rely on the existing
 `prebuild` hook, which runs before `npm run build` (including in CI).
 
-## Deployment (Vercel)
-
-1. Create a new Vercel project from this repository.
-2. Set the **Environment Variable** `VITE_CONVEX_URL` to your production Convex deployment URL.
-3. Deploy.
-
-Convex hosting is handled separately:
-
-```bash
-npx convex deploy
-```
-
 ## Deployment (GitHub Pages + Custom Domain)
 
 1. Update the SvelteKit adapter to static (already configured in this template) and commit the changes.
@@ -92,12 +80,6 @@ npx convex deploy
 If you are hosting at `https://<user>.github.io/<repo>/`, set a **repository variable** named `BASE_PATH` to `/<repo>`.
 For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
 (`BASE_PATH` is not sensitive, so a variable is appropriate—not a secret.)
-
-**How to set `BASE_PATH` in GitHub:**
-1. Go to **Settings → Secrets and variables → Actions**.
-2. Under **Variables**, click **New repository variable**.
-3. Set **Name** to `BASE_PATH`.
-4. Set **Value** to `/<repo>` (replace `<repo>` with your repository name), then click **Add variable**.
 
 **How to set `BASE_PATH` in GitHub:**
 1. Go to **Settings → Secrets and variables → Actions**.
@@ -124,12 +106,6 @@ Use an **environment variable** if you need different values per environment (fo
 2. Under **Environment variables**, click **Add variable**.
 3. Set **Name** to `VITE_CONVEX_URL`.
 4. Set **Value** to your Convex deployment URL, then click **Add variable**.
-
-**How to set `VITE_CONVEX_URL` in GitHub:**
-1. Go to **Settings → Secrets and variables → Actions**.
-2. Under **Variables**, click **New repository variable**.
-3. Set **Name** to `VITE_CONVEX_URL`.
-4. Set **Value** to your Convex deployment URL (for example, `https://<your-team>.convex.cloud`), then click **Add variable**.
 
 ### Optional: Deploy Convex from GitHub Actions
 
