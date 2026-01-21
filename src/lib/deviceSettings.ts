@@ -3,7 +3,6 @@ import { base64ToBytes, bytesToBase64 } from './crypto/encoding';
 import { exportRawKey, importAesKey } from './crypto/keys';
 
 export type DeviceSettings = {
-  authMethod: 'magic' | 'totp';
   biometricsEnabled: boolean;
   biometricCredentialId?: string;
   allowUnsafeDekCache: boolean;
@@ -14,7 +13,6 @@ const CACHED_DEK_KEY = 'e2ee:cached-dek';
 const AUTH_METHOD_KEY = 'e2ee:auth-method';
 
 const defaultSettings: DeviceSettings = {
-  authMethod: 'magic',
   biometricsEnabled: false,
   biometricCredentialId: undefined,
   allowUnsafeDekCache: false
@@ -101,15 +99,15 @@ export const loadUnsafeDek = async (userId: string, deviceId: string): Promise<C
 };
 
 export const getAuthMethodPreference = () => {
-  if (!browser) return defaultSettings.authMethod;
+  if (!browser) return 'magic';
   const stored = localStorage.getItem(AUTH_METHOD_KEY);
   if (stored === 'magic' || stored === 'totp') {
     return stored;
   }
-  return defaultSettings.authMethod;
+  return 'magic';
 };
 
-export const setAuthMethodPreference = (method: DeviceSettings['authMethod']) => {
+export const setAuthMethodPreference = (method: 'magic' | 'totp') => {
   if (!browser) return;
   localStorage.setItem(AUTH_METHOD_KEY, method);
 };

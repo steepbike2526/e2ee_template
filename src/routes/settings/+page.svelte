@@ -15,7 +15,7 @@
   import { loadDeviceKey, wrapDekWithMasterKey } from '$lib/e2ee';
   import { setSession } from '$lib/session';
   import { storeDeviceRecord } from '$lib/storage/device';
-  import { updatePassphrase } from '$lib/api';
+  import { getUserPreferences, updatePassphrase, updateUserPreferences } from '$lib/api';
   import {
     clearUnsafeDek,
     getAuthMethodPreference,
@@ -27,6 +27,9 @@
   import { isBiometricAvailable, promptBiometric, registerBiometricCredential } from '$lib/biometrics';
 
   let settings = getDeviceSettings(null);
+  let authMethod = getAuthMethodPreference();
+  let totpEnabled = true;
+  let authMethodError = '';
   let biometricAvailable = false;
   let biometricStatus = '';
   let passphraseError = '';
@@ -35,17 +38,50 @@
   let newPassphrase = '';
   let confirmPassphrase = '';
   let refreshWarning = '';
+  let lastSessionToken = '';
 
   const refreshSettings = () => {
     const session = get(sessionStore);
     settings = getDeviceSettings(session?.userId ?? null);
   };
 
-  const handleAuthMethodChange = (method) => {
+  const refreshUserPreferences = async (sessionToken) => {
+    try {
+      const response = await getUserPreferences({ sessionToken });
+      authMethod = response.authMethod;
+      totpEnabled = response.totpEnabled;
+      setAuthMethodPreference(response.authMethod);
+    } catch (err) {
+      console.error('Failed to load user preferences.', err);
+      authMethod = getAuthMethodPreference();
+    }
+  };
+
+  const handleAuthMethodChange = async (method) => {
+    authMethodError = '';
     const session = get(sessionStore);
-    if (!session) return;
-    settings = updateDeviceSettings(session.userId, { authMethod: method });
+    if (!session) {
+      authMethod = method;
+      setAuthMethodPreference(method);
+      return;
+    }
+    if (method === 'totp' && !totpEnabled) {
+      authMethodError = 'Enable TOTP during registration before selecting it here.';
+      return;
+    }
+    const previousMethod = authMethod;
+    authMethod = method;
     setAuthMethodPreference(method);
+    try {
+      const response = await updateUserPreferences({ sessionToken: session.sessionToken, authMethod: method });
+      authMethod = response.authMethod;
+      totpEnabled = response.totpEnabled;
+      setAuthMethodPreference(response.authMethod);
+    } catch (err) {
+      console.error('Failed to update user preferences.', err);
+      authMethodError = err instanceof Error ? err.message : 'Failed to update sign-in method.';
+      authMethod = previousMethod;
+    }
   };
 
   const handleBiometricToggle = async (enabled) => {
@@ -175,16 +211,20 @@
     refreshSettings();
     const session = get(sessionStore);
     if (session) {
-      setAuthMethodPreference(settings.authMethod);
+      lastSessionToken = session.sessionToken;
+      await refreshUserPreferences(session.sessionToken);
     } else {
-      settings.authMethod = getAuthMethodPreference();
+      authMethod = getAuthMethodPreference();
     }
     biometricAvailable = await isBiometricAvailable();
   });
 
   $: if ($sessionStore) {
     settings = getDeviceSettings($sessionStore.userId);
-    setAuthMethodPreference(settings.authMethod);
+    if ($sessionStore.sessionToken && $sessionStore.sessionToken !== lastSessionToken) {
+      lastSessionToken = $sessionStore.sessionToken;
+      void refreshUserPreferences($sessionStore.sessionToken);
+    }
   }
 </script>
 
@@ -204,7 +244,7 @@
             <input
               type="radio"
               name="auth-method"
-              checked={settings.authMethod === 'magic'}
+              checked={authMethod === 'magic'}
               on:change={() => handleAuthMethodChange('magic')}
             />
             Magic link
@@ -213,12 +253,19 @@
             <input
               type="radio"
               name="auth-method"
-              checked={settings.authMethod === 'totp'}
+              checked={authMethod === 'totp'}
+              disabled={!totpEnabled}
               on:change={() => handleAuthMethodChange('totp')}
             />
             TOTP
           </label>
         </div>
+        {#if !totpEnabled}
+          <div class="helper">TOTP is not enabled for this account.</div>
+        {/if}
+        {#if authMethodError}
+          <div class="error">{authMethodError}</div>
+        {/if}
       </section>
 
       <section class="panel">
