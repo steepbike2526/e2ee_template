@@ -29,7 +29,6 @@
   let settings = getDeviceSettings(null);
   let biometricAvailable = false;
   let biometricStatus = '';
-  let deviceSetupStatus = '';
   let passphraseError = '';
   let passphraseSuccess = '';
   let currentPassphrase = '';
@@ -172,37 +171,20 @@
     }
   };
 
-  const handleCopySetup = async () => {
-    deviceSetupStatus = '';
-    const session = get(sessionStore);
-    if (!session) return;
-    const message = `Set up another device:\n1. Open the login page.\n2. Sign in with ${settings.authMethod === 'totp' ? 'TOTP' : 'magic link'}.\n3. Unlock with your passphrase to register the new device.\nUsername: ${session.username}`;
-    try {
-      await navigator.clipboard.writeText(message);
-      deviceSetupStatus = 'Setup instructions copied to clipboard.';
-    } catch {
-      deviceSetupStatus = 'Unable to copy. You can still follow the steps above.';
-    }
-  };
-
   onMount(async () => {
     refreshSettings();
-    const preferredMethod = getAuthMethodPreference();
     const session = get(sessionStore);
     if (session) {
-      settings = updateDeviceSettings(session.userId, { authMethod: preferredMethod });
+      setAuthMethodPreference(settings.authMethod);
     } else {
-      settings.authMethod = preferredMethod;
+      settings.authMethod = getAuthMethodPreference();
     }
     biometricAvailable = await isBiometricAvailable();
   });
 
   $: if ($sessionStore) {
     settings = getDeviceSettings($sessionStore.userId);
-    const preferredMethod = getAuthMethodPreference();
-    if (settings.authMethod !== preferredMethod) {
-      settings = updateDeviceSettings($sessionStore.userId, { authMethod: preferredMethod });
-    }
+    setAuthMethodPreference(settings.authMethod);
   }
 </script>
 
@@ -309,22 +291,6 @@
         </div>
       </section>
 
-      <section class="panel">
-        <h3>Set up another device</h3>
-        <p class="helper">
-          Use your existing login method and passphrase on the new device. The new device will register its own device
-          key on first unlock.
-        </p>
-        <ol>
-          <li>Open the login page on the new device.</li>
-          <li>Sign in using {settings.authMethod === 'totp' ? 'TOTP' : 'magic link'}.</li>
-          <li>Enter your passphrase to register and unlock.</li>
-        </ol>
-        <button type="button" class="secondary" on:click={handleCopySetup}>Copy setup instructions</button>
-        {#if deviceSetupStatus}
-          <div class="helper">{deviceSetupStatus}</div>
-        {/if}
-      </section>
     </div>
   {/if}
 </section>
@@ -371,8 +337,4 @@
     border: 1px solid #334155;
   }
 
-  ol {
-    margin: 0.75rem 0 0;
-    padding-left: 1.4rem;
-  }
 </style>
