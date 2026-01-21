@@ -1,13 +1,11 @@
-# E2EE Notes Template (SvelteKit + Convex)
+<img src="https://github.com/user-attachments/assets/3496d54a-9f05-4834-b319-4839b43a6352" width="500">
+<br><br><br>
 
-This template is a human-readable starting point for a SvelteKit PWA that stores **end-to-end encrypted notes** in a Convex backend. The server only sees ciphertext and metadata — the data encryption key (DEK) and plaintext never leave the client.
+**NoAppStore** is a template for an E2EE SvelteKit PWA. With this template you can deploy an E2EE app cross platform to any device!!!
+
+The demo hosts the client on github pages and stores **end-to-end encrypted notes** in a Convex backend. The server only sees ciphertext and metadata — the data encryption key (DEK) and plaintext never leave the client.
 
 ## What you get
-
-- **SvelteKit PWA** with offline support + installable manifest.
-- **Convex backend** for auth, encrypted notes, and device wrapping records.
-- **End-to-end encryption (E2EE)** with Argon2id, per-user DEK, and per-device wrapping keys.
-- **Offline-first notes** using IndexedDB with deterministic sync.
 
 ## Local setup
 
@@ -25,9 +23,9 @@ npx convex dev
 
 This will create a `.env.local` file with your `CONVEX_URL`.
 
-If you plan to enable TOTP during registration, set a 32-byte base64 secret for
+To enable TOTP during registration, set a 32-byte base64 secret for
 Convex so TOTP secrets can be encrypted at rest. You only need to set this once
-per Convex deployment; changing it later will prevent existing TOTP secrets from
+per Convex environment; changing it later will prevent existing TOTP secrets from
 decrypting.
 
 ```bash
@@ -56,8 +54,7 @@ Visit http://localhost:5173
 
 ## Versioning
 
-The app version lives in `src/lib/version.ts` and is bumped by `scripts/bump-version.js`.
-Use the following npm scripts to manage version updates:
+The app version lives in `src/lib/version.ts` and is bumped automatically by the GitHub workflow. You can do it manually by using the following npm scripts to manage version updates:
 
 ```bash
 npm run version:major
@@ -65,29 +62,15 @@ npm run version:minor
 npm run version:patch
 ```
 
-Running `version:major` or `version:minor` resets the patch number to `0` as part of the
-script logic. To auto-bump the patch version without Husky, rely on the existing
-`prebuild` hook, which runs before `npm run build` (including in CI).
-
 ## Deployment (GitHub Pages + Custom Domain)
 
-This template no longer uses Vercel for hosting; use GitHub Pages instead.
-
-1. Update the SvelteKit adapter to static (already configured in this template) and commit the changes.
-2. Push to `main`. The included GitHub Actions workflow builds the app and deploys the `build/` output to GitHub Pages.
+1. Push to `main`. The included GitHub Actions workflow builds the app and deploys the `build/` output to GitHub Pages.
 3. In GitHub, go to **Settings → Pages** and select **GitHub Actions** as the source.
 
 ### Configure base path (only if not using a custom domain)
 
 If you are hosting at `https://<user>.github.io/<repo>/`, set a **repository variable** named `BASE_PATH` to `/<repo>`.
 For custom domains, leave `BASE_PATH` unset so assets resolve from `/`.
-(`BASE_PATH` is not sensitive, so a variable is appropriate—not a secret.)
-
-**How to set `BASE_PATH` in GitHub:**
-1. Go to **Settings → Secrets and variables → Actions**.
-2. Under **Variables**, click **New repository variable**.
-3. Set **Name** to `BASE_PATH`.
-4. Set **Value** to `/<repo>` (replace `<repo>` with your repository name), then click **Add variable**.
 
 ### Configure environment variables
 
@@ -97,33 +80,14 @@ Use a **repository variable** if the value is the same for every deployment and 
 Use an **environment variable** if you need different values per environment (for example, preview vs. production) or if you use environment protection rules like required reviewers.
 (`VITE_CONVEX_URL` is typically public, so a variable is appropriate—not a secret.)
 
-**How to set `VITE_CONVEX_URL` in GitHub (repository variable):**
-1. Go to **Settings → Secrets and variables → Actions**.
-2. Under **Variables**, click **New repository variable**.
-3. Set **Name** to `VITE_CONVEX_URL`.
-4. Set **Value** to your Convex deployment URL (for example, `https://<your-team>.convex.cloud`), then click **Add variable**.
-
-**How to set `VITE_CONVEX_URL` in GitHub (environment variable):**
-1. Go to **Settings → Environments** and select `github-pages` (or create it).
-2. Under **Environment variables**, click **Add variable**.
-3. Set **Name** to `VITE_CONVEX_URL`.
-4. Set **Value** to your Convex deployment URL, then click **Add variable**.
-
 ### Deploy Convex from GitHub Actions
 
-To deploy Convex from the GitHub Pages workflow, set:
+To enable deployment of Convex from the GitHub workflow, set:
 
 - **Repository secret** `CONVEX_DEPLOY_KEY` (from the Convex dashboard; required for non-interactive CI auth)
 - **Repository or environment variable** `VITE_CONVEX_URL` with your Convex deployment URL
 
 The workflow runs `npx convex deploy --url "$VITE_CONVEX_URL"` before the frontend build.
-
-### Custom domain
-
-1. In **Settings → Pages**, set your custom domain (e.g., `notes.example.com`). GitHub will create a `CNAME` file.
-2. Create a DNS record:
-   - **CNAME** for subdomains: `notes.example.com` → `<user>.github.io`
-   - **A records** for apex domains: use GitHub Pages IPs from GitHub docs
 
 ## Architecture overview
 
@@ -143,7 +107,7 @@ The workflow runs `npx convex deploy --url "$VITE_CONVEX_URL"` before the fronte
 
 ### Encryption flow (signup)
 
-1. Client registers user (auth) with email and optional TOTP enrollment.
+1. Client registers user (auth) with email or TOTP enrollment. **note for magic links to work you must set up your own email provide to make use of the token from the magicLinks table**
 2. Convex returns the per-user `e2eeSalt` and (if enabled) a TOTP secret.
 3. Client derives MK from the local passphrase with Argon2id and generates a random DEK.
 4. Client generates a device wrapping key, encrypts it with the MK, and stores it locally.
@@ -164,7 +128,9 @@ The workflow runs `npx convex deploy --url "$VITE_CONVEX_URL"` before the fronte
 
 ## Security notes & limitations
 
-- Browser storage is **best-effort** and not equivalent to a hardware enclave.
+- The client is deployed to GitHub pages so that it can be publicly audited
+- Updates never happen automatically. If there is an update, a button will appear next to the version number in the top right corner.
+- Browser storage is not equivalent to a hardware enclave.
 - This demo uses AES-GCM for both note encryption and wrapping. Nonces are random per encryption.
 - Passphrase-based MK derivation uses Argon2id via `argon2-browser` with configurable parameters.
 - Even with E2EE, Convex still stores metadata like note timestamps, ciphertext sizes, and note identifiers.
@@ -178,31 +144,3 @@ src/lib/storage/      # IndexedDB helpers (offline cache + device keys)
 src/routes/           # SvelteKit pages
 static/               # PWA icons
 ```
-
-## Notes for extending
-
-- To add multi-device onboarding, implement a DEK export/import flow (e.g., QR or passphrase) so a new device can register its own wrapping key.
-- If you want passphrase recovery, design a key rotation or escrow flow that does not expose plaintext to the server.
-
----
-
-This template prioritizes clarity over cleverness so you can expand it safely.
-
-## Data migrations (Convex)
-
-When you change the schema in a way that adds new required fields, you need to
-backfill existing documents so they conform before re-tightening the validators.
-A safe workflow looks like this:
-
-1. **Temporarily relax the schema** for the new field (e.g., `v.optional(...)`).
-2. **Run a migration** to backfill existing documents.
-3. **Tighten the schema again** once the data is updated.
-
-This repo includes a migration to backfill missing user emails:
-
-```bash
-npx convex run migrations:backfillUserEmails --args '{"defaultDomain":"legacy.invalid"}'
-```
-
-Choose a `defaultDomain` that you control, or update the migration to map
-real emails from your own source of truth before making `email` required again.
