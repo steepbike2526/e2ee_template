@@ -9,7 +9,13 @@
   import { setSession } from '$lib/session';
   import { dekStore, sessionStore } from '$lib/state';
   import { readAnyDeviceRecord } from '$lib/storage/device';
-  import { getAuthMethodPreference, getDeviceSettings, setAuthMethodPreference, storeUnsafeDek } from '$lib/deviceSettings';
+  import {
+    getAuthMethodPreference,
+    getDeviceSettings,
+    loadUnsafeDek,
+    setAuthMethodPreference,
+    storeUnsafeDek
+  } from '$lib/deviceSettings';
   import { promptBiometric } from '$lib/biometrics';
 
   const savedEmailKey = 'e2ee:lastEmail';
@@ -178,6 +184,46 @@
       loading = false;
     }
   };
+
+  const handlePasskeyUnlock = async () => {
+    error = '';
+    if (!pendingSession) return;
+    const deviceSettings = getDeviceSettings(pendingSession.userId);
+    if (!deviceSettings.biometricsEnabled || !deviceSettings.biometricCredentialId) {
+      error = 'Passkey verification is not enabled for this device.';
+      return;
+    }
+    if (!deviceSettings.allowUnsafeDekCache) {
+      error = 'Enable “Keep this device unlocked after refresh” to use passkey-only unlock.';
+      return;
+    }
+    if (!pendingSession.deviceId) {
+      error = 'Unlock with your passphrase once to finish setting up this device.';
+      return;
+    }
+    loading = true;
+    try {
+      await promptBiometric(deviceSettings.biometricCredentialId);
+      const cachedDek = await loadUnsafeDek(pendingSession.userId, pendingSession.deviceId);
+      if (!cachedDek) {
+        error = 'No cached device key found. Unlock with your passphrase to refresh it.';
+        return;
+      }
+      await setSession({
+        sessionToken: pendingSession.sessionToken,
+        userId: pendingSession.userId,
+        username: pendingSession.username,
+        e2eeSalt: pendingSession.e2eeSalt,
+        deviceId: pendingSession.deviceId
+      });
+      dekStore.set(cachedDek);
+      await goto(`${base}/notes`);
+    } catch (err) {
+      error = err instanceof Error ? err.message : 'Passkey unlock failed.';
+    } finally {
+      loading = false;
+    }
+  };
 </script>
 
 <section class="card">
@@ -250,6 +296,10 @@
     {/if}
   {:else}
     <div class="form">
+      <p class="helper">Use your passkey or your passphrase to unlock this device.</p>
+      <button type="button" class="secondary" on:click={handlePasskeyUnlock} disabled={loading}>
+        {loading ? 'Unlocking...' : 'Unlock with passkey'}
+      </button>
       <label>
         Decryption passphrase
         <input bind:value={passphrase} type="password" autocomplete="current-password" />
@@ -282,6 +332,12 @@
 
   .tabs button.active {
     background: #1e293b;
+  }
+
+  .secondary {
+    background: transparent;
+    color: #e2e8f0;
+    border: 1px solid #334155;
   }
 
 </style>
