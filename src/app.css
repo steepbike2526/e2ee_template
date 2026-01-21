@@ -36,6 +36,12 @@ button {
   cursor: pointer;
 }
 
+.secondary {
+  background: transparent;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+}
+
 .helper {
   font-size: 0.85rem;
   color: #94a3b8;
