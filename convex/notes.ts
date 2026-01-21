@@ -5,6 +5,7 @@ import { getSessionUser } from './lib/session';
 export const createNote = mutation({
   args: {
     sessionToken: v.string(),
+    clientNoteId: v.string(),
     ciphertext: v.string(),
     nonce: v.string(),
     aad: v.string(),
@@ -17,8 +18,19 @@ export const createNote = mutation({
       throw new Error('Unauthorized');
     }
 
+    const existing = await ctx.db
+      .query('notes')
+      .withIndex('by_user_client', (q) =>
+        q.eq('userId', session.user._id).eq('clientNoteId', args.clientNoteId)
+      )
+      .first();
+    if (existing) {
+      return { success: true, sessionToken: session.sessionToken };
+    }
+
     await ctx.db.insert('notes', {
       userId: session.user._id,
+      clientNoteId: args.clientNoteId,
       ciphertext: args.ciphertext,
       nonce: args.nonce,
       aad: args.aad,
@@ -48,7 +60,7 @@ export const listNotes = mutation({
     return {
       sessionToken: session.sessionToken,
       notes: notes.map((note) => ({
-        id: note._id,
+        id: note.clientNoteId ?? note._id,
         ciphertext: note.ciphertext,
         nonce: note.nonce,
         aad: note.aad,
