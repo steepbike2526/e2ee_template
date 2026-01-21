@@ -56,15 +56,15 @@
       return;
     }
     if (!biometricAvailable) {
-      biometricStatus = 'Biometrics are not available on this device.';
+      biometricStatus = 'Passkey or device verification is not available on this device.';
       return;
     }
     try {
       const credentialId = await registerBiometricCredential(session.userId);
       settings = updateDeviceSettings(session.userId, { biometricsEnabled: true, biometricCredentialId: credentialId });
-      biometricStatus = 'Biometric unlock is enabled for this device.';
+      biometricStatus = 'Passkey or device verification is enabled for this device.';
     } catch (err) {
-      biometricStatus = err instanceof Error ? err.message : 'Failed to enable biometrics.';
+      biometricStatus = err instanceof Error ? err.message : 'Failed to enable passkey verification.';
     }
   };
 
@@ -74,9 +74,9 @@
     if (!session || !settings.biometricCredentialId) return;
     try {
       await promptBiometric(settings.biometricCredentialId);
-      biometricStatus = 'Biometric prompt succeeded.';
+      biometricStatus = 'Passkey prompt succeeded.';
     } catch (err) {
-      biometricStatus = err instanceof Error ? err.message : 'Biometric prompt failed.';
+      biometricStatus = err instanceof Error ? err.message : 'Passkey prompt failed.';
     }
   };
 
@@ -228,18 +228,20 @@
       </section>
 
       <section class="panel">
-        <h3>Biometrics</h3>
-        <p class="helper">Use WebAuthn to prompt for biometric verification before unlocking.</p>
+        <h3>Passkey / device verification</h3>
+        <p class="helper">
+          Use WebAuthn to unlock with the device method (Face ID, Touch ID, PIN, or a platform passkey).
+        </p>
         <label class="toggle">
           <input
             type="checkbox"
             checked={settings.biometricsEnabled}
             on:change={(event) => handleBiometricToggle(event.currentTarget.checked)}
           />
-          Enable biometric prompt on this device
+          Enable passkey or device verification on this device
         </label>
         <button type="button" class="secondary" on:click={handleBiometricTest} disabled={!settings.biometricCredentialId}>
-          Test biometric prompt
+          Test passkey prompt
         </button>
         {#if biometricStatus}
           <div class="helper">{biometricStatus}</div>
@@ -249,7 +251,8 @@
       <section class="panel">
         <h3>Refresh behavior</h3>
         <p class="helper">
-          Skip the passphrase check after a refresh by storing the DEK locally on this device.
+          Skip the passphrase check after a refresh by storing the DEK locally on this device. When passkey
+          verification is enabled, refresh unlock will use the passkey instead of the passphrase.
         </p>
         <label class="toggle">
           <input
