@@ -12,6 +12,13 @@ const ARGON2_PARAMS = {
   hashLen: 32
 };
 
+const PASS_VERIFIER_PARAMS = {
+  time: 3,
+  mem: 64 * 1024,
+  parallelism: 1,
+  hashLen: 32
+};
+
 export type DerivedMasterKey = {
   keyBytes: Uint8Array;
   salt: string;
@@ -32,6 +39,17 @@ export async function deriveMasterKey(password: string, saltBase64: string): Pro
     salt: saltBase64,
     params: ARGON2_PARAMS
   };
+}
+
+export async function derivePassphraseVerifier(password: string, saltBase64: string): Promise<string> {
+  const salt = base64ToBytes(saltBase64);
+  const result = await argon2.hash({
+    pass: password,
+    salt,
+    type: argon2.ArgonType.Argon2id,
+    ...PASS_VERIFIER_PARAMS
+  });
+  return bytesToBase64(new Uint8Array(result.hash));
 }
 
 export function generateRandomSalt(): string {

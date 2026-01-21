@@ -18,14 +18,28 @@ export type DeviceRecord = {
   deviceKeyNonce: string;
 };
 
+export type SessionKeyRecord = {
+  id: string;
+  key: CryptoKey;
+};
+
+export type SessionRecord = {
+  id: string;
+  ciphertext: string;
+  nonce: string;
+  version: number;
+};
+
 export type NotesDb = IDBPDatabase<{
   pendingNotes: PendingNote;
   cachedNotes: CachedNote;
   deviceRecords: DeviceRecord;
+  sessionKeys: SessionKeyRecord;
+  sessions: SessionRecord;
 }>;
 
 export async function openNotesDb(): Promise<NotesDb> {
-  return openDB('e2ee-notes', 2, {
+  return openDB('e2ee-notes', 3, {
     upgrade(db) {
       if (!db.objectStoreNames.contains('pendingNotes')) {
         db.createObjectStore('pendingNotes', { keyPath: 'id' });
@@ -36,8 +50,11 @@ export async function openNotesDb(): Promise<NotesDb> {
       if (!db.objectStoreNames.contains('deviceRecords')) {
         db.createObjectStore('deviceRecords', { keyPath: 'deviceId' });
       }
-      if (db.objectStoreNames.contains('sessions')) {
-        db.deleteObjectStore('sessions');
+      if (!db.objectStoreNames.contains('sessionKeys')) {
+        db.createObjectStore('sessionKeys', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('sessions')) {
+        db.createObjectStore('sessions', { keyPath: 'id' });
       }
     }
   });

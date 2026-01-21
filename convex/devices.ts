@@ -2,6 +2,14 @@ import { mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { getSessionUser } from './lib/session';
 
+const DEVICE_WRAP_VERSION = 1;
+
+function assertValidWrapVersion(version: number) {
+  if (version !== DEVICE_WRAP_VERSION) {
+    throw new Error('Unsupported device wrap version.');
+  }
+}
+
 export const registerDevice = mutation({
   args: {
     sessionToken: v.string(),
@@ -15,6 +23,8 @@ export const registerDevice = mutation({
     if (!session) {
       throw new Error('Unauthorized');
     }
+
+    assertValidWrapVersion(args.version);
 
     const existing = await ctx.db
       .query('devices')

@@ -2,7 +2,8 @@
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { createDeviceKeyBundle, wrapDekForDevice, wrapDekWithMasterKey } from '$lib/e2ee';
-  import { deriveMasterKey, generateAesKey } from '$lib/crypto/keys';
+  import { deriveMasterKey, derivePassphraseVerifier, generateAesKey, generateRandomSalt } from '$lib/crypto/keys';
+  import { createPassphraseProof } from '$lib/crypto/proof';
   import { registerDevice, registerUser, storeMasterWrappedDek } from '$lib/api';
   import { setSession } from '$lib/session';
   import { dekStore } from '$lib/state';
@@ -35,10 +36,15 @@
     if (error) return;
     loading = true;
     try {
+      const passphraseVerifierSalt = generateRandomSalt();
+      const passphraseVerifier = await derivePassphraseVerifier(passphrase, passphraseVerifierSalt);
       const response = await registerUser({
         username,
         email: email.trim() ? email.trim() : undefined,
-        enableTotp
+        enableTotp,
+        passphraseVerifier,
+        passphraseVerifierSalt,
+        passphraseVerifierVersion: 1
       });
       const masterKey = await deriveMasterKey(passphrase, response.e2eeSalt);
       const dek = await generateAesKey();
@@ -60,7 +66,8 @@
         sessionToken: currentSessionToken,
         wrappedDek: masterWrappedDek.ciphertext,
         wrapNonce: masterWrappedDek.nonce,
-        version: 1
+        version: 1,
+        passphraseProof: await createPassphraseProof(passphraseVerifier, currentSessionToken)
       });
       currentSessionToken = masterResponse.sessionToken ?? currentSessionToken;
 
@@ -69,6 +76,8 @@
         userId: response.userId,
         username: response.username,
         e2eeSalt: response.e2eeSalt,
+        passphraseVerifierSalt: response.passphraseVerifierSalt,
+        passphraseVerifierVersion: response.passphraseVerifierVersion,
         deviceId: deviceBundle.deviceId
       });
 

@@ -1,50 +1,40 @@
 import { browser } from '$app/environment';
 import { sessionStore, dekStore, type SessionState } from './state';
-
-const SESSION_STORAGE_KEY = 'e2ee:session';
+import { clearSessionState, readSessionState, storeSessionState } from './storage/session';
 
 const isSessionState = (value: unknown): value is SessionState => {
   if (!value || typeof value !== 'object') return false;
   const session = value as SessionState;
   return Boolean(
-    session.sessionToken &&
+      session.sessionToken &&
       session.userId &&
       session.username &&
       session.e2eeSalt &&
-      session.deviceId
+      session.deviceId &&
+      session.passphraseVerifierSalt &&
+      typeof session.passphraseVerifierVersion === 'number'
   );
 };
 
-const readStoredSession = (): SessionState | null => {
-  if (!browser) return null;
-  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    if (isSessionState(parsed)) {
-      return parsed;
-    }
-  } catch {
-    // Ignore invalid storage payloads.
-  }
-  localStorage.removeItem(SESSION_STORAGE_KEY);
-  return null;
-};
-
 export async function restoreSession() {
-  const session = readStoredSession();
+  if (!browser) return null;
+  const session = await readSessionState();
+  if (session && !isSessionState(session)) {
+    await clearSessionState();
+    return null;
+  }
   if (session) {
     sessionStore.set(session);
   }
   return session;
 }
 
-export function updateSessionToken(sessionToken: string) {
+export async function updateSessionToken(sessionToken: string) {
   sessionStore.update((session) => {
     if (!session) return session;
     const updated = { ...session, sessionToken };
     if (browser) {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updated));
+      void storeSessionState(updated);
     }
     return updated;
   });
@@ -53,7 +43,7 @@ export function updateSessionToken(sessionToken: string) {
 export async function setSession(session: SessionState) {
   sessionStore.set(session);
   if (browser) {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    await storeSessionState(session);
   }
 }
 
@@ -61,6 +51,6 @@ export async function clearSession() {
   sessionStore.set(null);
   dekStore.set(null);
   if (browser) {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+    await clearSessionState();
   }
 }

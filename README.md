@@ -167,6 +167,7 @@ When both are present, the workflow runs `npx convex deploy` before the frontend
 - Browser storage is **best-effort** and not equivalent to a hardware enclave.
 - This demo uses AES-GCM for both note encryption and wrapping. Nonces are random per encryption.
 - Passphrase-based MK derivation uses Argon2id via `argon2-browser` with configurable parameters.
+- Even with E2EE, Convex still stores metadata like note timestamps, ciphertext sizes, and note identifiers.
 
 ## Project structure
 

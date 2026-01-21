@@ -6,6 +6,9 @@ export default defineSchema({
     username: v.string(),
     email: v.optional(v.string()),
     e2eeSalt: v.string(),
+    passphraseVerifier: v.string(),
+    passphraseVerifierSalt: v.string(),
+    passphraseVerifierVersion: v.number(),
     masterWrappedDek: v.optional(v.string()),
     masterWrapNonce: v.optional(v.string()),
     masterWrapVersion: v.optional(v.number()),
@@ -25,9 +28,9 @@ export default defineSchema({
     .index('by_user_token_hash', ['userId', 'tokenHash']),
   sessions: defineTable({
     userId: v.id('users'),
-    token: v.string(),
+    tokenHash: v.string(),
     expiresAt: v.number()
-  }).index('by_token', ['token']),
+  }).index('by_token_hash', ['tokenHash']),
   rateLimits: defineTable({
     key: v.string(),
     count: v.number(),
