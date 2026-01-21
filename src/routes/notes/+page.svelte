@@ -41,17 +41,16 @@
   const hydrateNotes = async (records) => {
     const dek = get(dekStore);
     if (!dek) return;
-    const seen = new Set();
-    const uniqueRecords = records
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .filter((record) => {
-        const key = extractNoteKey(record);
-        if (!key || seen.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      });
+    const recordMap = new Map();
+    for (const record of records) {
+      const key = extractNoteKey(record);
+      if (!key) continue;
+      const existing = recordMap.get(key);
+      if (!existing || record.createdAt > existing.createdAt) {
+        recordMap.set(key, record);
+      }
+    }
+    const uniqueRecords = [...recordMap.values()].sort((a, b) => b.createdAt - a.createdAt);
     const decrypted = await Promise.all(
       uniqueRecords.map(async (note) => {
         try {
@@ -100,18 +99,20 @@
     }
     syncStatusStore.set('syncing');
     const pending = await readPendingNotes(session.userId);
-    for (const note of pending) {
-      await createNote({
-        sessionToken: session.sessionToken,
-        clientNoteId: note.id,
-        ciphertext: note.ciphertext,
-        nonce: note.nonce,
-        aad: note.aad,
-        version: note.version,
-        createdAt: note.createdAt
-      });
-      await removePendingNote(note.id);
-    }
+    await Promise.all(
+      pending.map(async (note) => {
+        await createNote({
+          sessionToken: session.sessionToken,
+          clientNoteId: note.id,
+          ciphertext: note.ciphertext,
+          nonce: note.nonce,
+          aad: note.aad,
+          version: note.version,
+          createdAt: note.createdAt
+        });
+        await removePendingNote(note.id);
+      })
+    );
     syncStatusStore.set('idle');
   };
 

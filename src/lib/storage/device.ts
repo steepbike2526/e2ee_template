@@ -12,6 +12,6 @@ export async function readDeviceRecord(deviceId: string): Promise<DeviceRecord |
 
 export async function readAnyDeviceRecord(): Promise<DeviceRecord | undefined> {
   const db = await openNotesDb();
-  const records = await db.getAll('deviceRecords');
-  return records[0];
+  const cursor = await db.transaction('deviceRecords').store.openCursor();
+  return cursor?.value;
 }
